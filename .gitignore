@@ -1,0 +1,52 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Model weights (auto-downloaded at runtime)
+weights/
+
+# Generated results
+results/
+
+# Downloaded sample images (re-downloadable via download_samples.py)
+sample_images/*.png
+sample_images/*.jpg
+sample_images/*.bmp
+sample_images/*.tiff
+sample_images/*.webp
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temp
+*.tmp
+*.temp

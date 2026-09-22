@@ -1,0 +1,26 @@
+# Core image processing
+numpy>=1.24.0
+Pillow>=10.0.0
+opencv-python>=4.8.0
+scikit-image>=0.21.0
+scipy>=1.11.0
+
+# Deep learning
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Pretrained restoration models
+basicsr>=1.4.2                  # NAFNet / SCUNet architectures + weight downloader
+simple-lama-inpainting>=0.1.0   # LaMa inpainting
+
+# Perceptual metric
+lpips>=0.1.4
+
+# Web UI
+gradio>=4.10.0
+
+# Utilities
+requests>=2.31.0
+tqdm>=4.66.0
+huggingface_hub>=0.20.0
+matplotlib>=3.8.0

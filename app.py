@@ -1,0 +1,420 @@
+"""
+app.py — Gradio web UI for the AI Image Restoration System.
+
+Launch with:
+    python app.py
+    python app.py --port 7861 --share
+"""
+from __future__ import annotations
+
+import argparse
+import io
+import os
+import sys
+import time
+from pathlib import Path
+
+import numpy as np
+import gradio as gr
+from PIL import Image
+
+# ─── Local imports ────────────────────────────────────────────────────────────
+sys.path.insert(0, str(Path(__file__).parent))
+
+from degradation import degrade, MODES
+from metrics import compute_all, improvement_summary
+from restoration import restore
+from utils import pil_to_array, array_to_pil, resize_if_larger, get_logger
+from visualizer import make_comparison_figure, fig_to_pil
+
+log = get_logger("app")
+
+SAMPLE_DIR = Path(__file__).parent / "sample_images"
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
+
+def _list_samples() -> list[str]:
+    exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+    if not SAMPLE_DIR.exists():
+        return []
+    files = sorted(
+        str(p) for p in SAMPLE_DIR.iterdir()
+        if p.is_file() and p.suffix.lower() in exts
+    )
+    return files[:200]  # show up to 200 samples in the gallery
+
+
+def _degrade_params(mode: str, sigma: float, prob: float, kernel_size: int,
+                    motion_len: int, angle: float, n_patches: int,
+                    patch_size: int, quality: int) -> dict:
+    return dict(
+        sigma=sigma, prob=prob, kernel_size=int(kernel_size),
+        length=int(motion_len), angle=angle,
+        n_patches=int(n_patches), patch_size=int(patch_size),
+        quality=int(quality),
+    )
+
+
+# ─── Core pipeline (shared by all tabs) ──────────────────────────────────────
+
+def run_pipeline(
+    original_pil: Image.Image | None,
+    mode: str,
+    method: str,
+    max_dim: int,
+    sigma: float, prob: float, kernel_size: int,
+    motion_len: int, angle: float,
+    n_patches: int, patch_size: int, quality: int,
+    progress=gr.Progress(track_tqdm=True),
+) -> tuple:
+    """
+    Full pipeline: degrade → restore → metrics → comparison figure.
+    Returns (corrupted_pil, restored_pil, comparison_pil, metrics_df, status_str)
+    """
+    if original_pil is None:
+        return None, None, None, None, "⚠️ Please upload or select an image first."
+
+    progress(0, desc="Loading image …")
+    original = pil_to_array(original_pil)
+    original = resize_if_larger(original, int(max_dim))
+
+    # ── Degrade ───────────────────────────────────────────────────────────────
+    progress(0.15, desc=f"Applying degradation: {MODES[mode]} …")
+    params = _degrade_params(mode, sigma, prob, kernel_size, motion_len,
+                              angle, n_patches, patch_size, quality)
+    corrupted, mask = degrade(original, mode, **params)
+
+    # ── Restore ───────────────────────────────────────────────────────────────
+    progress(0.35, desc="Restoring image …")
+    t0 = time.perf_counter()
+    try:
+        restored = restore(corrupted, mode=mode, mask=mask, method=method.lower())
+    except Exception as exc:
+        return (
+            array_to_pil(corrupted), None, None, None,
+            f"❌ Restoration failed: {exc}"
+        )
+    elapsed = time.perf_counter() - t0
+
+    # ── Metrics ───────────────────────────────────────────────────────────────
+    progress(0.75, desc="Computing quality metrics …")
+    summary = improvement_summary(original, corrupted, restored)
+
+    metrics_data = []
+    for k in summary["before"]:
+        b = summary["before"][k]
+        a = summary["after"][k]
+        if isinstance(b, float) and isinstance(a, float):
+            delta = a - b
+            better = (delta > 0) if k != "LPIPS" else (delta < 0)
+            arrow  = ("🟢 +" if better else "🔴 ") + f"{abs(delta):.4f}"
+            metrics_data.append([k, f"{b:.4f}", f"{a:.4f}", arrow])
+        else:
+            metrics_data.append([k, str(b), str(a), "—"])
+
+    import pandas as pd
+    metrics_df = pd.DataFrame(
+        metrics_data,
+        columns=["Metric", "Before Restoration", "After Restoration", "Δ Improvement"],
+    )
+
+    # ── Comparison figure ─────────────────────────────────────────────────────
+    progress(0.88, desc="Building comparison figure …")
+    fig = make_comparison_figure(
+        original, corrupted, restored,
+        summary["before"], summary["after"],
+        title=f"Restoration — {MODES[mode]}",
+        mask=mask,
+    )
+    comparison_pil = fig_to_pil(fig)
+
+    progress(1.0, desc="Done!")
+    status = (
+        f"✅ Done in {elapsed:.1f} s | "
+        f"PSNR: {summary['before']['PSNR (dB)']:.2f} → "
+        f"{summary['after']['PSNR (dB)']:.2f} dB | "
+        f"SSIM: {summary['before']['SSIM']:.4f} → "
+        f"{summary['after']['SSIM']:.4f}"
+    )
+
+    return array_to_pil(corrupted), array_to_pil(restored), comparison_pil, metrics_df, status
+
+
+# ─── Build UI ────────────────────────────────────────────────────────────────
+
+def build_app() -> gr.Blocks:
+    sample_files = _list_samples()
+
+    css = """
+    .gradio-container { background: #0f0f14; color: #e0e0ff; font-family: 'Inter', sans-serif; }
+    .panel-header { background: #1e1e2e; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+    footer { display: none !important; }
+    """
+
+    with gr.Blocks(title="🖼️ AI Image Restoration") as demo:
+
+        # ── Header ────────────────────────────────────────────────────────────
+        gr.HTML("""
+        <div style="text-align:center; padding:24px 0 8px;">
+          <h1 style="font-size:2.2rem; font-weight:800; background:linear-gradient(90deg,#60a5fa,#a78bfa);
+                     -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+            🖼️ AI Image Restoration System
+          </h1>
+          <p style="color:#94a3b8; font-size:1rem; margin-top:4px;">
+            Reconstruct images degraded by noise · blur · missing regions · compression artifacts
+          </p>
+        </div>
+        """)
+
+        # ── Shared degradation parameter state ────────────────────────────────
+        with gr.Row(equal_height=False):
+
+            # ── Left column: controls ─────────────────────────────────────────
+            with gr.Column(scale=1, min_width=300):
+                gr.Markdown("### ⚙️ Configuration")
+
+                mode_dd = gr.Dropdown(
+                    choices=list(MODES.keys()),
+                    label="Degradation Type",
+                    value="noise",
+                    info="Type of damage to simulate",
+                )
+
+                method_dd = gr.Dropdown(
+                    choices=["auto", "nafnet", "dncnn", "wavelet", "nlm",
+                             "wiener", "rl", "lama", "ns", "telea", "tv"],
+                    label="Restoration Method",
+                    value="auto",
+                    info="'auto' uses the best available model",
+                )
+
+                max_dim_sl = gr.Slider(256, 1024, value=512, step=64,
+                                       label="Max Image Dimension (px)",
+                                       info="Larger = slower on CPU")
+
+                gr.Markdown("#### Degradation Parameters")
+
+                with gr.Accordion("Noise Parameters", open=True) as noise_acc:
+                    sigma_sl  = gr.Slider(5, 100, value=25, step=5, label="Gaussian σ (noise level)")
+                    prob_sl   = gr.Slider(0.01, 0.2, value=0.05, step=0.01, label="Salt-Pepper Probability")
+
+                with gr.Accordion("Blur Parameters", open=False) as blur_acc:
+                    kernel_sl = gr.Slider(3, 51, value=15, step=2, label="Kernel Size")
+                    mlen_sl   = gr.Slider(5, 60, value=25, step=5, label="Motion Length (px)")
+                    angle_sl  = gr.Slider(0, 180, value=45, step=5, label="Motion Angle (°)")
+
+                with gr.Accordion("Inpainting Parameters", open=False) as inp_acc:
+                    npatch_sl = gr.Slider(1, 8, value=3, step=1, label="Number of Missing Patches")
+                    psize_sl  = gr.Slider(20, 200, value=80, step=10, label="Patch Size (px)")
+
+                with gr.Accordion("Artifact Parameters", open=False) as art_acc:
+                    qual_sl   = gr.Slider(1, 50, value=10, step=1, label="JPEG Quality (lower = worse)")
+
+            # ── Right column: tabs ───────────────────────────────────────────
+            with gr.Column(scale=3):
+
+                with gr.Tabs():
+
+                    # ── Tab 1: Single Image ────────────────────────────────
+                    with gr.TabItem("🖼️  Single Image"):
+                        with gr.Row():
+                            upload_img = gr.Image(
+                                label="Upload Image", type="pil",
+                                height=320, sources=["upload", "clipboard"],
+                            )
+
+                        run_btn = gr.Button("🚀  Apply & Restore", variant="primary", size="lg")
+                        status_box = gr.Textbox(label="Status", interactive=False, lines=2)
+
+                        with gr.Row():
+                            corrupted_out = gr.Image(label="🔴 Corrupted", type="pil", height=280)
+                            restored_out  = gr.Image(label="🟢 Restored",  type="pil", height=280)
+
+                        comparison_out = gr.Image(label="📊 Comparison Report", type="pil", height=420)
+                        metrics_table  = gr.DataFrame(label="Quality Metrics",
+                                                       headers=["Metric", "Before", "After", "Δ"],
+                                                       row_count=3)
+
+                        run_btn.click(
+                            fn=run_pipeline,
+                            inputs=[
+                                upload_img, mode_dd, method_dd, max_dim_sl,
+                                sigma_sl, prob_sl, kernel_sl,
+                                mlen_sl, angle_sl,
+                                npatch_sl, psize_sl, qual_sl,
+                            ],
+                            outputs=[corrupted_out, restored_out, comparison_out,
+                                     metrics_table, status_box],
+                        )
+
+                    # ── Tab 2: Sample Gallery ─────────────────────────────
+                    with gr.TabItem("🗂️  Sample Gallery"):
+                        gr.Markdown(
+                            f"**{len(sample_files)} sample images available.** "
+                            "Click an image to select it, then press *Restore Selected*."
+                        )
+
+                        gallery = gr.Gallery(
+                            value=sample_files[:50] if sample_files else [],
+                            label="Sample Images",
+                            columns=6,
+                            height=360,
+                            allow_preview=True,
+                            object_fit="cover",
+                        )
+
+                        selected_img = gr.Image(label="Selected Sample", type="pil", height=240,
+                                                visible=True)
+                        restore_sample_btn = gr.Button("🚀  Restore Selected Sample",
+                                                        variant="primary")
+                        sample_status = gr.Textbox(label="Status", interactive=False, lines=2)
+
+                        with gr.Row():
+                            sample_corrupted = gr.Image(label="🔴 Corrupted", type="pil", height=260)
+                            sample_restored  = gr.Image(label="🟢 Restored",  type="pil", height=260)
+
+                        sample_comparison = gr.Image(label="📊 Comparison Report", type="pil", height=400)
+                        sample_metrics    = gr.DataFrame(label="Quality Metrics", row_count=3)
+
+                        def _select_gallery(evt: gr.SelectData):
+                            if sample_files and evt.index < len(sample_files):
+                                return Image.open(sample_files[evt.index]).convert("RGB")
+                            return None
+
+                        gallery.select(_select_gallery, outputs=selected_img)
+
+                        restore_sample_btn.click(
+                            fn=run_pipeline,
+                            inputs=[
+                                selected_img, mode_dd, method_dd, max_dim_sl,
+                                sigma_sl, prob_sl, kernel_sl,
+                                mlen_sl, angle_sl,
+                                npatch_sl, psize_sl, qual_sl,
+                            ],
+                            outputs=[sample_corrupted, sample_restored, sample_comparison,
+                                     sample_metrics, sample_status],
+                        )
+
+                    # ── Tab 3: Batch Evaluate ─────────────────────────────
+                    with gr.TabItem("📈  Batch Evaluate"):
+                        gr.Markdown(
+                            "Run all sample images through the selected pipeline and compute "
+                            "average metrics."
+                        )
+                        n_images_sl = gr.Slider(5, min(100, max(5, len(sample_files))),
+                                                 value=min(10, max(5, len(sample_files))),
+                                                 step=5, label="Number of Sample Images to Process")
+                        batch_btn   = gr.Button("▶️  Run Batch Evaluation", variant="primary")
+                        batch_status = gr.Textbox(label="Progress", interactive=False, lines=3)
+                        batch_results = gr.DataFrame(
+                            label="Per-Image Results",
+                            headers=["Image", "PSNR Before", "PSNR After", "SSIM Before",
+                                     "SSIM After", "LPIPS Before", "LPIPS After"],
+                        )
+                        avg_results = gr.DataFrame(label="Average Metrics", row_count=3)
+
+                        def run_batch(
+                            n_images, mode, method, max_dim,
+                            sigma, prob, kernel_size, motion_len, angle,
+                            n_patches, patch_size, quality,
+                            progress=gr.Progress(track_tqdm=True),
+                        ):
+                            if not sample_files:
+                                return "No samples found. Run download_samples.py first.", None, None
+
+                            files = sample_files[:int(n_images)]
+                            rows = []
+                            params = _degrade_params(mode, sigma, prob, kernel_size, motion_len,
+                                                      angle, n_patches, patch_size, quality)
+
+                            for i, fp in enumerate(files):
+                                progress(i / len(files), desc=f"[{i+1}/{len(files)}] {Path(fp).name}")
+                                try:
+                                    from utils import load_image
+                                    orig = load_image(fp)
+                                    orig = resize_if_larger(orig, int(max_dim))
+                                    corr, msk = degrade(orig, mode, **params)
+                                    rest = restore(corr, mode=mode, mask=msk, method=method.lower())
+                                    m_b = compute_all(orig, corr)
+                                    m_a = compute_all(orig, rest)
+                                    rows.append([
+                                        Path(fp).name,
+                                        round(m_b["PSNR (dB)"], 2), round(m_a["PSNR (dB)"], 2),
+                                        round(m_b["SSIM"], 4),     round(m_a["SSIM"], 4),
+                                        str(m_b["LPIPS"]),         str(m_a["LPIPS"]),
+                                    ])
+                                except Exception as exc:
+                                    log.warning("Batch: error on %s — %s", fp, exc)
+
+                            if not rows:
+                                return "No images processed successfully.", None, None
+
+                            import pandas as pd
+                            per_img_df = pd.DataFrame(rows, columns=[
+                                "Image", "PSNR Before", "PSNR After",
+                                "SSIM Before", "SSIM After",
+                                "LPIPS Before", "LPIPS After",
+                            ])
+
+                            # Averages
+                            avg_data = []
+                            for metric, b_col, a_col in [
+                                ("PSNR (dB)", "PSNR Before", "PSNR After"),
+                                ("SSIM",      "SSIM Before",  "SSIM After"),
+                            ]:
+                                b_mean = per_img_df[b_col].mean()
+                                a_mean = per_img_df[a_col].mean()
+                                avg_data.append([metric, f"{b_mean:.4f}", f"{a_mean:.4f}",
+                                                  f"+{a_mean - b_mean:.4f}"])
+                            avg_df = pd.DataFrame(avg_data,
+                                                   columns=["Metric", "Avg Before", "Avg After", "Avg Δ"])
+
+                            status_msg = (
+                                f"✅ Processed {len(rows)}/{len(files)} images. "
+                                f"Avg PSNR gain: +{per_img_df['PSNR After'].mean() - per_img_df['PSNR Before'].mean():.2f} dB"
+                            )
+                            return status_msg, per_img_df, avg_df
+
+                        batch_btn.click(
+                            fn=run_batch,
+                            inputs=[n_images_sl, mode_dd, method_dd, max_dim_sl,
+                                    sigma_sl, prob_sl, kernel_sl,
+                                    mlen_sl, angle_sl,
+                                    npatch_sl, psize_sl, qual_sl],
+                            outputs=[batch_status, batch_results, avg_results],
+                        )
+
+        # ── Footer ────────────────────────────────────────────────────────────
+        gr.HTML("""
+        <div style="text-align:center; padding:16px 0 4px; color:#64748b; font-size:0.85rem;">
+          Models: NAFNet (megvii-research) · DnCNN (cszn/KAIR) · LaMa (saic-mdal) ·
+          Wiener / RL / BayesShrink / TV classical methods<br>
+          Metrics: PSNR · SSIM (scikit-image) · LPIPS (lpips)
+        </div>
+        """)
+
+    return demo
+
+
+# ─── Entry point ─────────────────────────────────────────────────────────────
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--port",  type=int, default=7860)
+    p.add_argument("--share", action="store_true", help="Create a public Gradio share link")
+    p.add_argument("--host",  default="127.0.0.1")
+    args = p.parse_args()
+
+    demo = build_app()
+    demo.launch(
+        server_name=args.host,
+        server_port=args.port,
+        share=args.share,
+        inbrowser=True,
+        theme=gr.themes.Base(primary_hue="blue", secondary_hue="slate", neutral_hue="slate"),
+    )
+
+
+if __name__ == "__main__":
+    main()
