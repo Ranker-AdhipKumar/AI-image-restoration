@@ -1,8 +1,8 @@
 # 🖼️ AI-Based Image Restoration System
 
-![Restoration Demo](assets/demo_comparison.png)
-
 A modular deep learning + classical CV pipeline that reconstructs images degraded by **noise**, **blur**, **missing regions**, and **compression artifacts** — with a full **Gradio web UI**, **CLI**, and quantitative evaluation via **PSNR**, **SSIM**, and **LPIPS**.
+
+![Interactive Web UI](assets/web_ui.png)
 
 ---
 
@@ -35,6 +35,8 @@ Each degradation type has a **primary DL model** with graceful fallbacks:
 
 ## 📊 Sample Results
 
+![Restoration Comparison](assets/demo_comparison.png)
+
 | Degradation | PSNR Before | PSNR After | SSIM Δ | LPIPS Δ |
 |---|---|---|---|---|
 | Gaussian Noise σ=25 | 20.28 dB | **22.69 dB** (+2.41) | +0.130 | — |
@@ -48,8 +50,8 @@ Each degradation type has a **primary DL model** with graceful fallbacks:
 
 ### 1. Clone & set up environment
 ```bash
-git clone https://github.com/YOUR_USERNAME/ai-image-restoration.git
-cd ai-image-restoration
+git clone https://github.com/Ranker-AdhipKumar/AI-image-restoration.git
+cd AI-image-restoration
 
 python -m venv venv
 # Windows:
