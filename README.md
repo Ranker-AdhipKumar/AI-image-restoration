@@ -1,5 +1,7 @@
 # 🖼️ AI-Based Image Restoration System
 
+![Restoration Demo](assets/demo_comparison.png)
+
 A modular deep learning + classical CV pipeline that reconstructs images degraded by **noise**, **blur**, **missing regions**, and **compression artifacts** — with a full **Gradio web UI**, **CLI**, and quantitative evaluation via **PSNR**, **SSIM**, and **LPIPS**.
 
 ---
