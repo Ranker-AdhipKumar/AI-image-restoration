@@ -224,6 +224,25 @@ def build_app() -> gr.Blocks:
         transform: translateY(-1px) !important;
     }
 
+    /* Try Another Image button styling */
+    .retry-btn {
+        margin-top: 16px !important;
+        background: rgba(30, 41, 59, 0.75) !important;
+        border: 1px solid rgba(148, 163, 184, 0.35) !important;
+        color: #f1f5f9 !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.3px !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+        transition: all 0.25s ease !important;
+    }
+    .retry-btn:hover {
+        background: rgba(51, 65, 85, 0.95) !important;
+        border-color: #60a5fa !important;
+        color: #ffffff !important;
+        box-shadow: 0 6px 20px rgba(96, 165, 250, 0.25) !important;
+        transform: translateY(-1px) !important;
+    }
+
     footer { display: none !important; }
     """
 
@@ -326,6 +345,12 @@ def build_app() -> gr.Blocks:
 
                         comparison_out = gr.Image(label="📊 Comparison Report", type="pil", height=420)
                         metrics_table  = gr.DataFrame(label="Quality Metrics", row_count=3)
+                        retry_single_btn = gr.Button("🔄  Try Another Image", variant="secondary", size="lg", elem_classes=["retry-btn"])
+
+                        def _reset_single():
+                            import pandas as pd
+                            empty_df = pd.DataFrame(columns=["Metric", "Before Restoration", "After Restoration", "Improvement"])
+                            return None, None, None, None, empty_df, ""
 
                         run_btn.click(
                             fn=run_pipeline,
@@ -338,6 +363,14 @@ def build_app() -> gr.Blocks:
                             outputs=[corrupted_out, restored_out, comparison_out,
                                      metrics_table, status_box],
                             concurrency_limit=5,
+                        )
+
+                        retry_single_btn.click(
+                            fn=_reset_single,
+                            inputs=[],
+                            outputs=[upload_img, corrupted_out, restored_out, comparison_out,
+                                     metrics_table, status_box],
+                            js="() => { window.scrollTo({top: 0, behavior: 'smooth'}); }",
                         )
 
                     # ── Tab 2: Sample Gallery ─────────────────────────────
@@ -368,6 +401,7 @@ def build_app() -> gr.Blocks:
 
                         sample_comparison = gr.Image(label="📊 Comparison Report", type="pil", height=400)
                         sample_metrics    = gr.DataFrame(label="Quality Metrics", row_count=3)
+                        retry_sample_btn  = gr.Button("🔄  Try Another Sample", variant="secondary", size="lg", elem_classes=["retry-btn"])
 
                         def _select_gallery(evt: gr.SelectData):
                             if sample_files and evt.index < len(sample_files):
@@ -375,6 +409,11 @@ def build_app() -> gr.Blocks:
                             return None
 
                         gallery.select(_select_gallery, outputs=selected_img)
+
+                        def _reset_sample():
+                            import pandas as pd
+                            empty_df = pd.DataFrame(columns=["Metric", "Before Restoration", "After Restoration", "Improvement"])
+                            return None, None, None, None, empty_df, ""
 
                         restore_sample_btn.click(
                             fn=run_pipeline,
@@ -387,6 +426,14 @@ def build_app() -> gr.Blocks:
                             outputs=[sample_corrupted, sample_restored, sample_comparison,
                                      sample_metrics, sample_status],
                             concurrency_limit=5,
+                        )
+
+                        retry_sample_btn.click(
+                            fn=_reset_sample,
+                            inputs=[],
+                            outputs=[selected_img, sample_corrupted, sample_restored, sample_comparison,
+                                     sample_metrics, sample_status],
+                            js="() => { window.scrollTo({top: 0, behavior: 'smooth'}); }",
                         )
 
                     # ── Tab 3: Batch Evaluate ─────────────────────────────
