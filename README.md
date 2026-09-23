@@ -33,13 +33,21 @@ A modular deep learning + classical CV pipeline that reconstructs images degrade
 
 ---
 
-## 🌐 Live Demo
+## 🌐 Live Demo & Screen Recording
 
 You can try the interactive restoration web app live in your browser (no local setup required):
 
 [![Live Demo](https://img.shields.io/badge/🚀_Launch_Live_Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://ai-image-restoration-zane.onrender.com/)
 
 👉 **Live URL:** [https://ai-image-restoration-zane.onrender.com/](https://ai-image-restoration-zane.onrender.com/)
+
+### 🎥 System Walkthrough & Demo Recording
+
+The screen recording below demonstrates the complete workflow in action: image upload, real-time degradation simulation, instant restoration, quantitative metrics calculation (PSNR/SSIM/LPIPS), detailed 5-panel error heatmap comparison, and single-click reset:
+
+![AI Image Restoration System Demo](assets/demo_recording.gif)
+
+> 📹 *A high-definition MP4 recording is also available at [`assets/demo_recording.mp4`](assets/demo_recording.mp4).*
 
 ---
 
