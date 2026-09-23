@@ -98,7 +98,12 @@ def make_comparison_figure(
         b_val = metrics_before.get(m_name)
         a_val = metrics_after.get(m_name)
 
-        if isinstance(b_val, (int, float)) and isinstance(a_val, (int, float)):
+        import math
+        valid = (
+            isinstance(b_val, (int, float)) and not math.isnan(b_val) and not math.isinf(b_val) and
+            isinstance(a_val, (int, float)) and not math.isnan(a_val) and not math.isinf(a_val)
+        )
+        if valid:
             bars = ax.bar(
                 ["Before\nRestoration", "After\nRestoration"],
                 [b_val, a_val],
@@ -124,6 +129,11 @@ def make_comparison_figure(
             arrow_color = "#4ade80" if improvement else "#f87171"
             ax.text(0.5, 0.95, arrow_sym, transform=ax.transAxes,
                     ha="center", va="top", fontsize=20, color=arrow_color)
+        else:
+            ax.text(0.5, 0.5, "N/A\n(Metric Unavailable)", transform=ax.transAxes,
+                    ha="center", va="center", fontsize=9, color="#94a3b8")
+            ax.set_xticks([])
+            ax.set_yticks([])
 
         ax.set_title(m_name, color="white", fontsize=10, pad=4)
         ax.tick_params(colors="white", labelsize=7)

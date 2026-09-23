@@ -117,6 +117,9 @@ def ensure_weights_dir() -> Path:
     return WEIGHTS_DIR
 
 
+_FAILED_WEIGHT_URLS = set()
+
+
 def download_weights(url: str, filename: str, force: bool = False) -> Path:
     """
     Download model weights from *url* to the local weights directory.
@@ -130,12 +133,15 @@ def download_weights(url: str, filename: str, force: bool = False) -> Path:
     if dest.exists() and not force:
         return dest
 
+    if url in _FAILED_WEIGHT_URLS and not force:
+        raise RuntimeError(f"Weights URL {url} previously failed; skipping retry.")
+
     logger = get_logger("utils.download")
     logger.info("Downloading weights: %s → %s", url, dest)
 
     tmp_dest = dest.with_suffix(".tmp")
     try:
-        resp = requests.get(url, stream=True, timeout=120)
+        resp = requests.get(url, stream=True, timeout=10)
         resp.raise_for_status()
         total = int(resp.headers.get("content-length", 0))
         with open(tmp_dest, "wb") as f, tqdm(total=total, unit="B", unit_scale=True, desc=filename) as bar:
@@ -146,6 +152,7 @@ def download_weights(url: str, filename: str, force: bool = False) -> Path:
             tmp_dest.replace(dest)
         return dest
     except Exception as exc:
+        _FAILED_WEIGHT_URLS.add(url)
         if tmp_dest.exists():
             tmp_dest.unlink(missing_ok=True)
         raise exc

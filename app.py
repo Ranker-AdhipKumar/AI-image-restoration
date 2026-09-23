@@ -107,46 +107,66 @@ def run_pipeline(
     elapsed = time.perf_counter() - t0
 
     # ── Metrics ───────────────────────────────────────────────────────────────
-    progress(0.75, desc="Computing quality metrics …")
-    summary = improvement_summary(original, corrupted, restored)
+    # ── Metrics ───────────────────────────────────────────────────────────────
+    progress(0.70, desc="Computing quality metrics …")
+    import math
+    import pandas as pd
+
+    try:
+        summary = improvement_summary(original, corrupted, restored)
+    except Exception as exc:
+        log.warning("Metric computation failed: %s", exc)
+        summary = {"before": {}, "after": {}}
 
     metrics_data = []
-    for k in summary["before"]:
-        b = summary["before"][k]
-        a = summary["after"][k]
-        if isinstance(b, float) and isinstance(a, float):
+    for k in summary.get("before", {}):
+        b = summary["before"].get(k)
+        a = summary["after"].get(k)
+        valid = (
+            isinstance(b, (int, float)) and not math.isnan(b) and not math.isinf(b) and
+            isinstance(a, (int, float)) and not math.isnan(a) and not math.isinf(a)
+        )
+        if valid:
             delta = a - b
             better = (delta > 0) if k != "LPIPS" else (delta < 0)
-            arrow  = ("🟢 +" if better else "🔴 ") + f"{abs(delta):.4f}"
+            sign   = "+" if better else "-"
+            arrow  = f"{sign} {abs(delta):.4f}"
             metrics_data.append([k, f"{b:.4f}", f"{a:.4f}", arrow])
         else:
-            metrics_data.append([k, str(b), str(a), "—"])
+            metrics_data.append([k, "N/A", "N/A", "-"])
 
-    import pandas as pd
     metrics_df = pd.DataFrame(
         metrics_data,
-        columns=["Metric", "Before Restoration", "After Restoration", "Δ Improvement"],
+        columns=["Metric", "Before Restoration", "After Restoration", "Improvement"],
     )
 
     # ── Comparison figure ─────────────────────────────────────────────────────
-    progress(0.88, desc="Building comparison figure …")
-    fig = make_comparison_figure(
-        original, corrupted, restored,
-        summary["before"], summary["after"],
-        title=f"Restoration — {MODES[mode]}",
-        mask=mask,
-    )
-    comparison_pil = fig_to_pil(fig)
+    progress(0.85, desc="Building comparison report …")
+    comparison_pil = None
+    try:
+        fig = make_comparison_figure(
+            original, corrupted, restored,
+            summary.get("before", {}), summary.get("after", {}),
+            title=f"Restoration — {MODES[mode]}",
+            mask=mask,
+        )
+        comparison_pil = fig_to_pil(fig)
+    except Exception as exc:
+        log.warning("Comparison figure creation failed: %s", exc)
 
     progress(1.0, desc="Done!")
-    status = (
-        f"✅ Done in {elapsed:.1f} s | "
-        f"PSNR: {summary['before']['PSNR (dB)']:.2f} → "
-        f"{summary['after']['PSNR (dB)']:.2f} dB | "
-        f"SSIM: {summary['before']['SSIM']:.4f} → "
-        f"{summary['after']['SSIM']:.4f}"
-    )
+    psnr_b = summary.get("before", {}).get("PSNR (dB)")
+    psnr_a = summary.get("after", {}).get("PSNR (dB)")
+    ssim_b = summary.get("before", {}).get("SSIM")
+    ssim_a = summary.get("after", {}).get("SSIM")
 
+    status_parts = [f"Completed in {elapsed:.1f} s"]
+    if isinstance(psnr_b, (int, float)) and not math.isnan(psnr_b) and isinstance(psnr_a, (int, float)) and not math.isnan(psnr_a):
+        status_parts.append(f"PSNR: {psnr_b:.2f} -> {psnr_a:.2f} dB")
+    if isinstance(ssim_b, (int, float)) and not math.isnan(ssim_b) and isinstance(ssim_a, (int, float)) and not math.isnan(ssim_a):
+        status_parts.append(f"SSIM: {ssim_b:.4f} -> {ssim_a:.4f}")
+
+    status = " | ".join(status_parts)
     return array_to_pil(corrupted), array_to_pil(restored), comparison_pil, metrics_df, status
 
 
@@ -305,9 +325,7 @@ def build_app() -> gr.Blocks:
                             restored_out  = gr.Image(label="🟢 Restored",  type="pil", height=280)
 
                         comparison_out = gr.Image(label="📊 Comparison Report", type="pil", height=420)
-                        metrics_table  = gr.DataFrame(label="Quality Metrics",
-                                                       headers=["Metric", "Before", "After", "Δ"],
-                                                       row_count=3)
+                        metrics_table  = gr.DataFrame(label="Quality Metrics", row_count=3)
 
                         run_btn.click(
                             fn=run_pipeline,

@@ -175,9 +175,9 @@ def _denoise_wavelet(img: np.ndarray) -> np.ndarray:
 
 
 def _denoise_nlm(img: np.ndarray) -> np.ndarray:
-    """OpenCV Non-Local Means (colour)."""
+    """OpenCV Non-Local Means (colour, CPU optimized)."""
     return cv2.fastNlMeansDenoisingColored(img, None, h=10, hColor=10,
-                                           templateWindowSize=7, searchWindowSize=21)
+                                           templateWindowSize=5, searchWindowSize=13)
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
