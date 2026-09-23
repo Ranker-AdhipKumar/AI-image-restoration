@@ -23,8 +23,16 @@ log = get_logger(__name__)
 
 @functools.lru_cache(maxsize=1)
 def _load_lama():
-    """Try to load the LaMa model. Returns SimpleLama instance or None."""
+    """Try to load the LaMa model only if pre-cached locally."""
     try:
+        import torch
+        from pathlib import Path
+        hub_dir = Path(torch.hub.get_dir()) / "checkpoints"
+        lama_cached = any("lama" in f.name.lower() for f in hub_dir.glob("*.pt*")) if hub_dir.exists() else False
+        if not lama_cached and not torch.cuda.is_available():
+            log.info("LaMa weights not pre-cached locally; using fast OpenCV inpainting.")
+            return None
+
         from simple_lama_inpainting import SimpleLama
         model = SimpleLama()
         log.info("✓ LaMa inpainting model loaded.")

@@ -120,11 +120,17 @@ def ensure_weights_dir() -> Path:
 _FAILED_WEIGHT_URLS = set()
 
 
-def download_weights(url: str, filename: str, force: bool = False) -> Path:
+def download_weights(
+    url: str,
+    filename: str,
+    force: bool = False,
+    auto_download: bool = False,
+) -> Path | None:
     """
     Download model weights from *url* to the local weights directory.
-    Skips download if the file already exists (unless *force=True*).
-    Returns the local path.
+    If the file exists locally, returns its path.
+    If *auto_download* is False (default for web inference), returns None immediately
+    instead of blocking the server with a 150MB+ download.
     """
     import requests
     from tqdm import tqdm
@@ -132,6 +138,9 @@ def download_weights(url: str, filename: str, force: bool = False) -> Path:
     dest = ensure_weights_dir() / filename
     if dest.exists() and not force:
         return dest
+
+    if not auto_download:
+        return None
 
     if url in _FAILED_WEIGHT_URLS and not force:
         raise RuntimeError(f"Weights URL {url} previously failed; skipping retry.")
@@ -141,7 +150,7 @@ def download_weights(url: str, filename: str, force: bool = False) -> Path:
 
     tmp_dest = dest.with_suffix(".tmp")
     try:
-        resp = requests.get(url, stream=True, timeout=10)
+        resp = requests.get(url, stream=True, timeout=15)
         resp.raise_for_status()
         total = int(resp.headers.get("content-length", 0))
         with open(tmp_dest, "wb") as f, tqdm(total=total, unit="B", unit_scale=True, desc=filename) as bar:

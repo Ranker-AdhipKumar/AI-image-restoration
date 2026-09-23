@@ -61,13 +61,16 @@ class _DnCNN:
 # ─── NAFNet (via basicsr) ─────────────────────────────────────────────────────
 
 @functools.lru_cache(maxsize=1)
-def _load_nafnet():
-    """Try to load a pretrained NAFNet-SIDD model. Returns (model, device) or None."""
+def _load_nafnet(auto_download: bool = False):
+    """Try to load a pretrained NAFNet-SIDD model. Returns model or None."""
     try:
         import torch
         from restoration.nafnet_arch import NAFNet
 
-        weights_path = download_weights(_NAFNET_URL, _NAFNET_FILE)
+        weights_path = download_weights(_NAFNET_URL, _NAFNET_FILE, auto_download=auto_download)
+        if weights_path is None or not weights_path.exists():
+            log.info("NAFNet weights not present locally; using fast classical restoration.")
+            return None
 
         model = NAFNet(
             img_channel=3, width=64, middle_blks_num=12,
@@ -84,13 +87,16 @@ def _load_nafnet():
 
 
 @functools.lru_cache(maxsize=1)
-def _load_dncnn():
+def _load_dncnn(auto_download: bool = False):
     """Try to load a pretrained DnCNN (colour blind). Returns model or None."""
     try:
         import torch
         import torch.nn as nn
 
-        weights_path = download_weights(_DNCNN_URL, _DNCNN_FILE)
+        weights_path = download_weights(_DNCNN_URL, _DNCNN_FILE, auto_download=auto_download)
+        if weights_path is None or not weights_path.exists():
+            log.info("DnCNN weights not present locally; using fast classical restoration.")
+            return None
 
         # Build the DnCNN graph (channels=3 for colour, 17 layers)
         layers = [nn.Conv2d(3, 64, 3, padding=1), nn.ReLU(inplace=True)]

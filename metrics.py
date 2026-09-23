@@ -26,6 +26,14 @@ def _get_lpips():
     if _lpips_fn is None:
         try:
             import torch
+            from pathlib import Path
+            # Avoid downloading 244MB AlexNet model over web requests on CPU
+            hub_dir = Path(torch.hub.get_dir()) / "checkpoints"
+            alexnet_cached = any("alexnet" in f.name.lower() for f in hub_dir.glob("*.pth")) if hub_dir.exists() else False
+            if not alexnet_cached and not torch.cuda.is_available():
+                log.info("LPIPS AlexNet weights not pre-cached locally; skipping LPIPS to avoid web latency.")
+                return None
+
             import lpips as _lpips_lib
             _lpips_fn = _lpips_lib.LPIPS(net="alex", verbose=False)
             _lpips_fn.eval()

@@ -337,6 +337,7 @@ def build_app() -> gr.Blocks:
                             ],
                             outputs=[corrupted_out, restored_out, comparison_out,
                                      metrics_table, status_box],
+                            concurrency_limit=5,
                         )
 
                     # ── Tab 2: Sample Gallery ─────────────────────────────
@@ -385,6 +386,7 @@ def build_app() -> gr.Blocks:
                             ],
                             outputs=[sample_corrupted, sample_restored, sample_comparison,
                                      sample_metrics, sample_status],
+                            concurrency_limit=5,
                         )
 
                     # ── Tab 3: Batch Evaluate ─────────────────────────────
@@ -510,6 +512,7 @@ def main():
         server_name=host,
         server_port=port,
         share=args.share,
+        max_file_size="50mb",
         inbrowser=False if "PORT" in os.environ else True,
         prevent_thread_lock=True,
         theme=gr.themes.Base(primary_hue="blue", secondary_hue="slate", neutral_hue="slate"),

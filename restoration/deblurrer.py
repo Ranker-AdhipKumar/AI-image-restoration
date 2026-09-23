@@ -34,12 +34,16 @@ _NAFNET_GOPRO_FILE = "NAFNet-GoPro-width64.pth"
 # ─── Model loaders ────────────────────────────────────────────────────────────
 
 @functools.lru_cache(maxsize=1)
-def _load_nafnet_gopro():
+def _load_nafnet_gopro(auto_download: bool = False):
     try:
         import torch
         from restoration.nafnet_arch import NAFNet
 
-        weights_path = download_weights(_NAFNET_GOPRO_URL, _NAFNET_GOPRO_FILE)
+        weights_path = download_weights(_NAFNET_GOPRO_URL, _NAFNET_GOPRO_FILE, auto_download=auto_download)
+        if weights_path is None or not weights_path.exists():
+            log.info("NAFNet-GoPro weights not present locally; using fast classical deblurring.")
+            return None
+
         model = NAFNet(
             img_channel=3, width=64, middle_blks_num=12,
             enc_blks=[2, 2, 4, 8], dec_blks=[2, 2, 2, 2],
