@@ -212,7 +212,16 @@ def build_app() -> gr.Blocks:
         # ── Header ────────────────────────────────────────────────────────────
         gr.HTML(f"""
         <style>{css}</style>
-        <div style="text-align:center; padding:24px 0 8px;">
+        <div style="text-align:center; padding:22px 0 10px;">
+          <div style="margin-bottom:12px;">
+            <span style="display:inline-flex; align-items:center; gap:8px; padding:5px 16px; border-radius:999px;
+                        background:linear-gradient(90deg, rgba(71,85,105,0.45) 0%, rgba(56,189,248,0.22) 100%);
+                        border:1px solid rgba(148,163,184,0.30); font-size:0.84rem; color:#cbd5e1; box-shadow:0 2px 10px rgba(0,0,0,0.2);">
+              <span>🟣 Degraded & Desaturated</span>
+              <span style="opacity:0.6;">➔</span>
+              <span style="color:#60a5fa; font-weight:600;">✨ Reconstructed & Vivid</span>
+            </span>
+          </div>
           <h1 style="font-size:2.2rem; font-weight:800; margin:0; display:flex; align-items:center; justify-content:center; gap:12px;">
             <svg style="flex-shrink:0;" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -225,7 +234,7 @@ def build_app() -> gr.Blocks:
               AI Image Restoration System
             </span>
           </h1>
-          <p style="color:#94a3b8; font-size:1rem; margin-top:6px;">
+          <p style="color:#94a3b8; font-size:1rem; margin-top:8px;">
             Reconstruct images degraded by noise · blur · missing regions · compression artifacts
           </p>
         </div>
