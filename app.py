@@ -156,21 +156,76 @@ def build_app() -> gr.Blocks:
     sample_files = _list_samples()
 
     css = """
-    .gradio-container { background: #0f0f14; color: #e0e0ff; font-family: 'Inter', sans-serif; }
-    .panel-header { background: #1e1e2e; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+    /* ── Before / After Split Gradient Background ── */
+    /* Fades from muted, faded desaturated grey-slate on the left to vibrant, vivid deep blue/indigo/violet on the right */
+    body, .gradio-container, gradio-app {
+        background: 
+            radial-gradient(ellipse at 90% 25%, rgba(56, 189, 248, 0.20) 0%, transparent 55%),
+            radial-gradient(ellipse at 92% 80%, rgba(139, 92, 246, 0.22) 0%, transparent 60%),
+            radial-gradient(ellipse at 12% 40%, rgba(71, 85, 105, 0.40) 0%, transparent 60%),
+            linear-gradient(108deg, #111215 0%, #1a1c22 30%, #162032 55%, #0d1e40 76%, #1a143b 100%) !important;
+        background-attachment: fixed !important;
+        min-height: 100vh !important;
+        color: #e2e8f0 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif !important;
+    }
+
+    /* Left control column: desaturated subtle slate glass */
+    .controls-panel {
+        background: rgba(22, 24, 30, 0.75) !important;
+        border: 1px solid rgba(148, 163, 184, 0.20) !important;
+        border-radius: 14px !important;
+        padding: 16px !important;
+        backdrop-filter: blur(12px) !important;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    /* Right workspace column: rich vivid deep glass with subtle glowing border */
+    .workspace-panel {
+        background: rgba(14, 20, 38, 0.70) !important;
+        border: 1px solid rgba(96, 165, 250, 0.28) !important;
+        border-radius: 14px !important;
+        padding: 18px !important;
+        backdrop-filter: blur(14px) !important;
+        box-shadow: 0 14px 40px -10px rgba(96, 165, 250, 0.16) !important;
+    }
+
+    /* Primary Action button with vibrant restoration gradient */
+    button.primary {
+        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+        border: none !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.3px !important;
+        box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45) !important;
+        transition: all 0.25s ease !important;
+    }
+    button.primary:hover {
+        box-shadow: 0 6px 24px rgba(124, 58, 237, 0.55) !important;
+        transform: translateY(-1px) !important;
+    }
+
     footer { display: none !important; }
     """
 
     with gr.Blocks(title="🖼️ AI Image Restoration") as demo:
 
         # ── Header ────────────────────────────────────────────────────────────
-        gr.HTML("""
-        <div style="text-align:center; padding:24px 0 8px;">
-          <h1 style="font-size:2.2rem; font-weight:800; background:linear-gradient(90deg,#60a5fa,#a78bfa);
-                     -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        gr.HTML(f"""
+        <style>{css}</style>
+        <div style="text-align:center; padding:22px 0 14px;">
+          <div style="display:inline-flex; align-items:center; gap:8px; padding:4px 14px; border-radius:999px;
+                      background:linear-gradient(90deg, rgba(71,85,105,0.45) 0%, rgba(56,189,248,0.22) 100%);
+                      border:1px solid rgba(148,163,184,0.30); font-size:0.82rem; color:#cbd5e1; margin-bottom:12px;">
+            <span>🌑 Degraded & Desaturated</span>
+            <span style="opacity:0.6;">➔</span>
+            <span style="color:#60a5fa; font-weight:600;">✨ Reconstructed & Vivid</span>
+          </div>
+          <h1 style="font-size:2.3rem; font-weight:800; letter-spacing:-0.5px;
+                     background:linear-gradient(90deg, #94a3b8 0%, #60a5fa 50%, #c084fc 100%);
+                     -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0;">
             🖼️ AI Image Restoration System
           </h1>
-          <p style="color:#94a3b8; font-size:1rem; margin-top:4px;">
+          <p style="color:#94a3b8; font-size:1.02rem; margin-top:6px; max-width:640px; margin-left:auto; margin-right:auto;">
             Reconstruct images degraded by noise · blur · missing regions · compression artifacts
           </p>
         </div>
@@ -180,7 +235,7 @@ def build_app() -> gr.Blocks:
         with gr.Row(equal_height=False):
 
             # ── Left column: controls ─────────────────────────────────────────
-            with gr.Column(scale=1, min_width=300):
+            with gr.Column(scale=1, min_width=300, elem_classes=["controls-panel"]):
                 gr.Markdown("### ⚙️ Configuration")
 
                 mode_dd = gr.Dropdown(
@@ -221,7 +276,7 @@ def build_app() -> gr.Blocks:
                     qual_sl   = gr.Slider(1, 50, value=10, step=1, label="JPEG Quality (lower = worse)")
 
             # ── Right column: tabs ───────────────────────────────────────────
-            with gr.Column(scale=3):
+            with gr.Column(scale=3, elem_classes=["workspace-panel"]):
 
                 with gr.Tabs():
 
