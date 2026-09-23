@@ -405,13 +405,15 @@ def main():
     p.add_argument("--share", action="store_true", help="Create a public Gradio share link")
     p.add_argument("--host",  default="127.0.0.1")
     args = p.parse_args()
+    host = os.environ.get("HOST", args.host)
+    port = int(os.environ.get("PORT", args.port))
 
     demo = build_app()
     app, local_url, share_url = demo.launch(
-        server_name=args.host,
-        server_port=args.port,
+        server_name=host,
+        server_port=port,
         share=args.share,
-        inbrowser=True,
+        inbrowser=False if "PORT" in os.environ else True,
         prevent_thread_lock=True,
         theme=gr.themes.Base(primary_hue="blue", secondary_hue="slate", neutral_hue="slate"),
     )
