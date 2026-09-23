@@ -11,6 +11,7 @@ results/
 
 # Downloaded sample images (re-downloadable via download_samples.py)
 sample_images/*.png
+!sample_images/synthetic_*.png
 sample_images/*.jpg
 sample_images/*.bmp
 sample_images/*.tiff
@@ -50,3 +51,5 @@ desktop.ini
 # Temp
 *.tmp
 *.temp
+.gradio/
+live_url.txt

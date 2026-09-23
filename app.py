@@ -36,12 +36,21 @@ SAMPLE_DIR = Path(__file__).parent / "sample_images"
 
 def _list_samples() -> list[str]:
     exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
-    if not SAMPLE_DIR.exists():
-        return []
+    SAMPLE_DIR.mkdir(parents=True, exist_ok=True)
     files = sorted(
         str(p) for p in SAMPLE_DIR.iterdir()
         if p.is_file() and p.suffix.lower() in exts
     )
+    if not files:
+        try:
+            from sample_images.download_samples import generate_synthetic
+            generate_synthetic(10)
+            files = sorted(
+                str(p) for p in SAMPLE_DIR.iterdir()
+                if p.is_file() and p.suffix.lower() in exts
+            )
+        except Exception as e:
+            log.warning("Could not auto-generate synthetic samples: %s", e)
     return files[:200]  # show up to 200 samples in the gallery
 
 
@@ -302,9 +311,15 @@ def build_app() -> gr.Blocks:
                             "Run all sample images through the selected pipeline and compute "
                             "average metrics."
                         )
-                        n_images_sl = gr.Slider(5, min(100, max(5, len(sample_files))),
-                                                 value=min(10, max(5, len(sample_files))),
-                                                 step=5, label="Number of Sample Images to Process")
+                        n_samples = len(sample_files)
+                        max_batch = max(5, min(100, n_samples)) if n_samples > 1 else 10
+                        n_images_sl = gr.Slider(
+                            minimum=1,
+                            maximum=max_batch,
+                            value=min(5, max_batch),
+                            step=1,
+                            label="Number of Sample Images to Process",
+                        )
                         batch_btn   = gr.Button("▶️  Run Batch Evaluation", variant="primary")
                         batch_status = gr.Textbox(label="Progress", interactive=False, lines=3)
                         batch_results = gr.DataFrame(
