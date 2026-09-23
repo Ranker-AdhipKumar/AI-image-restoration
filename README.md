@@ -33,6 +33,16 @@ A modular deep learning + classical CV pipeline that reconstructs images degrade
 
 ---
 
+## 🌐 Live Demo
+
+You can try the interactive restoration web app live in your browser (no local setup required):
+
+[![Live Demo](https://img.shields.io/badge/🚀_Launch_Live_Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://ai-image-restoration-zane.onrender.com/)
+
+👉 **Live URL:** [https://ai-image-restoration-zane.onrender.com/](https://ai-image-restoration-zane.onrender.com/)
+
+---
+
 ## 🧠 Model Architecture
 
 Each degradation type has a **primary DL model** with graceful fallbacks:
