@@ -19,6 +19,7 @@ import gradio as gr
 from PIL import Image
 
 # ─── Local imports ────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 sys.path.insert(0, str(Path(__file__).parent))
 
 from degradation import degrade, MODES
@@ -33,6 +34,7 @@ SAMPLE_DIR = Path(__file__).parent / "sample_images"
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 def _list_samples() -> list[str]:
     exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
@@ -66,6 +68,7 @@ def _degrade_params(mode: str, sigma: float, prob: float, kernel_size: int,
 
 
 # ─── Core pipeline (shared by all tabs) ──────────────────────────────────────
+# Revied by Adhip Kumar
 
 def run_pipeline(
     original_pil: Image.Image | None,
@@ -89,12 +92,14 @@ def run_pipeline(
     original = resize_if_larger(original, int(max_dim))
 
     # ── Degrade ───────────────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     progress(0.15, desc=f"Applying degradation: {MODES[mode]} …")
     params = _degrade_params(mode, sigma, prob, kernel_size, motion_len,
                               angle, n_patches, patch_size, quality)
     corrupted, mask = degrade(original, mode, **params)
 
     # ── Restore ───────────────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     progress(0.35, desc="Restoring image …")
     t0 = time.perf_counter()
     try:
@@ -108,6 +113,7 @@ def run_pipeline(
 
     # ── Metrics ───────────────────────────────────────────────────────────────
     # ── Metrics ───────────────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     progress(0.70, desc="Computing quality metrics …")
     import math
     import pandas as pd
@@ -141,6 +147,7 @@ def run_pipeline(
     )
 
     # ── Comparison figure ─────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     progress(0.85, desc="Building comparison report …")
     comparison_pil = None
     try:
@@ -171,6 +178,7 @@ def run_pipeline(
 
 
 # ─── Build UI ────────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 def build_app() -> gr.Blocks:
     sample_files = _list_samples()
@@ -249,6 +257,7 @@ def build_app() -> gr.Blocks:
     with gr.Blocks(title="🖼️ AI Image Restoration") as demo:
 
         # ── Header ────────────────────────────────────────────────────────────
+        # Revied by Adhip Kumar
         gr.HTML(f"""
         <style>{css}</style>
         <div style="text-align:center; padding:22px 0 10px;">
@@ -280,9 +289,11 @@ def build_app() -> gr.Blocks:
         """)
 
         # ── Shared degradation parameter state ────────────────────────────────
+        # Revied by Adhip Kumar
         with gr.Row(equal_height=False):
 
             # ── Left column: controls ─────────────────────────────────────────
+            # Revied by Adhip Kumar
             with gr.Column(scale=1, min_width=300, elem_classes=["controls-panel"]):
                 gr.Markdown("### ⚙️ Configuration")
 
@@ -324,11 +335,13 @@ def build_app() -> gr.Blocks:
                     qual_sl   = gr.Slider(1, 50, value=10, step=1, label="JPEG Quality (lower = worse)")
 
             # ── Right column: tabs ───────────────────────────────────────────
+            # Revied by Adhip Kumar
             with gr.Column(scale=3, elem_classes=["workspace-panel"]):
 
                 with gr.Tabs():
 
                     # ── Tab 1: Single Image ────────────────────────────────
+                    # Revied by Adhip Kumar
                     with gr.TabItem("🖼️  Single Image"):
                         with gr.Row():
                             upload_img = gr.Image(
@@ -374,6 +387,7 @@ def build_app() -> gr.Blocks:
                         )
 
                     # ── Tab 2: Sample Gallery ─────────────────────────────
+                    # Revied by Adhip Kumar
                     with gr.TabItem("🗂️  Sample Gallery"):
                         gr.Markdown(
                             f"**{len(sample_files)} sample images available.** "
@@ -437,6 +451,7 @@ def build_app() -> gr.Blocks:
                         )
 
                     # ── Tab 3: Batch Evaluate ─────────────────────────────
+                    # Revied by Adhip Kumar
                     with gr.TabItem("📈  Batch Evaluate"):
                         gr.Markdown(
                             "Run all sample images through the selected pipeline and compute "
@@ -504,6 +519,7 @@ def build_app() -> gr.Blocks:
                             ])
 
                             # Averages
+                            # Revied by Adhip Kumar
                             avg_data = []
                             for metric, b_col, a_col in [
                                 ("PSNR (dB)", "PSNR Before", "PSNR After"),
@@ -532,6 +548,7 @@ def build_app() -> gr.Blocks:
                         )
 
         # ── Footer ────────────────────────────────────────────────────────────
+        # Revied by Adhip Kumar
         gr.HTML("""
         <div style="text-align:center; padding:16px 0 4px; color:#64748b; font-size:0.85rem;">
           Models: NAFNet (megvii-research) · DnCNN (cszn/KAIR) · LaMa (saic-mdal) ·
@@ -544,6 +561,7 @@ def build_app() -> gr.Blocks:
 
 
 # ─── Entry point ─────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 def main():
     p = argparse.ArgumentParser()

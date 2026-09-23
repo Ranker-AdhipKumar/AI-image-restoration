@@ -20,6 +20,7 @@ log = get_logger(__name__)
 
 
 # ─── Model loaders ────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 @functools.lru_cache(maxsize=1)
 def _load_lama():
@@ -43,6 +44,7 @@ def _load_lama():
 
 
 # ─── Inpainting methods ───────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 def _inpaint_lama(img: np.ndarray, mask: np.ndarray) -> Optional[np.ndarray]:
     """
@@ -87,6 +89,7 @@ def _inpaint_telea(img: np.ndarray, mask: np.ndarray) -> np.ndarray:
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 def inpaint(img: np.ndarray, mask: np.ndarray, method: str = "auto", **kwargs) -> np.ndarray:
     """
@@ -110,6 +113,7 @@ def inpaint(img: np.ndarray, mask: np.ndarray, method: str = "auto", **kwargs) -
         return _inpaint_telea(img, mask)
 
     # "auto" cascade
+    # Revied by Adhip Kumar
     try:
         import torch
         if torch.cuda.is_available():

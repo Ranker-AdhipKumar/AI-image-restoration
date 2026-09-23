@@ -39,6 +39,7 @@ SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ─── Helper ────────────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 def _download_url(url: str, dest: Path, session: requests.Session) -> bool:
     """Download *url* to *dest*. Returns True on success."""
@@ -59,8 +60,10 @@ def _download_url(url: str, dest: Path, session: requests.Session) -> bool:
 
 
 # ─── Source 1: Kodak PhotoCD (24 images) ─────────────────────────────────────
+# Revied by Adhip Kumar
 
 # Mirrored at multiple locations; try each.
+# Revied by Adhip Kumar
 _KODAK_BASES = [
     "https://r0k.us/graphics/kodak/kodak/",         # original site
     "https://huggingface.co/datasets/eugenesiow/Kodak24/resolve/main/data/",
@@ -95,6 +98,7 @@ def download_kodak(session: requests.Session) -> int:
 
 
 # ─── Source 2: BSD68 via Hugging Face datasets ────────────────────────────────
+# Revied by Adhip Kumar
 
 def download_bsd68(session: requests.Session) -> int:
     """Download BSD68 test images via Hugging Face datasets library."""
@@ -131,6 +135,7 @@ def _download_bsd68_direct(session: requests.Session) -> int:
 
 
 # ─── Source 3: DIV2K validation (100 images) ─────────────────────────────────
+# Revied by Adhip Kumar
 
 def download_div2k(session: requests.Session, limit: int = 100) -> int:
     """Download DIV2K validation HR images from Hugging Face datasets."""
@@ -156,6 +161,7 @@ def download_div2k(session: requests.Session, limit: int = 100) -> int:
 
 
 # ─── Source 4: USC-SIPI classic test images ───────────────────────────────────
+# Revied by Adhip Kumar
 
 _SIPI_IMAGES = {
     "lena_color.tif":   "https://sipi.usc.edu/database/preview/misc/4.2.04.jpg",
@@ -184,6 +190,7 @@ def download_sipi(session: requests.Session) -> int:
 
 
 # ─── Source 5: Generate synthetic test images ────────────────────────────────
+# Revied by Adhip Kumar
 
 def generate_synthetic(n: int = 20) -> int:
     """Generate simple synthetic images as a guaranteed fallback."""
@@ -199,9 +206,11 @@ def generate_synthetic(n: int = 20) -> int:
                 count += 1
                 continue
             # Random gradient + shapes
+            # Revied by Adhip Kumar
             w, h = 256, 256
             arr  = rng.integers(0, 256, (h, w, 3), dtype=np.uint8)
             # Smooth it
+            # Revied by Adhip Kumar
             import cv2
             arr = cv2.GaussianBlur(arr, (31, 31), 8)
             img = Image.fromarray(arr)
@@ -223,6 +232,7 @@ def generate_synthetic(n: int = 20) -> int:
 
 
 # ─── Entry point ─────────────────────────────────────────────────────────────
+# Revied by Adhip Kumar
 
 def main():
     p = argparse.ArgumentParser(description="Download benchmark images for the restoration system.")

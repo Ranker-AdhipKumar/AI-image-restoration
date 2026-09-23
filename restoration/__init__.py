@@ -1,3 +1,6 @@
+# Unified restoration pipeline
+# Revied by Adhip Kumar
+
 """
 restoration/__init__.py — Unified restoration pipeline.
 

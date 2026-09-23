@@ -4,21 +4,27 @@ main.py — CLI entry point for the AI Image Restoration System.
 Usage examples
 --------------
 # Denoise with auto method:
+# Revied by Adhip Kumar
 python main.py --input photo.jpg --degradation noise --sigma 30
 
 # Deblur with Wiener:
+# Revied by Adhip Kumar
 python main.py --input photo.jpg --degradation blur --kernel-size 15 --method wiener
 
 # Inpaint missing patches:
+# Revied by Adhip Kumar
 python main.py --input photo.jpg --degradation inpaint --n-patches 3 --patch-size 80
 
 # Remove JPEG artifacts:
+# Revied by Adhip Kumar
 python main.py --input photo.jpg --degradation artifact --quality 10
 
 # Run on a directory of images:
+# Revied by Adhip Kumar
 python main.py --input ./sample_images --degradation noise --output ./results --batch
 
 # Skip degradation (supply pre-corrupted image) and just restore + evaluate:
+# Revied by Adhip Kumar
 python main.py --input corrupted.jpg --skip-degrade --degradation noise
 """
 from __future__ import annotations
@@ -70,6 +76,7 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Print final metrics as JSON to stdout")
 
     # Degradation parameters
+    # Revied by Adhip Kumar
     dg = p.add_argument_group("Degradation parameters")
     dg.add_argument("--sigma",      type=float, default=25.0, help="Gaussian noise σ")
     dg.add_argument("--prob",       type=float, default=0.05, help="Salt-and-pepper probability")
@@ -109,11 +116,13 @@ def process_single(
     log.info("Processing: %s", img_path)
 
     # Load + optionally resize
+    # Revied by Adhip Kumar
     original = load_image(img_path)
     original = resize_if_larger(original, args.max_dim)
     log.info("Image size: %dx%d", original.shape[1], original.shape[0])
 
     # ── Degrade ───────────────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     mask: np.ndarray | None = None
     if args.skip_degrade:
         corrupted = original
@@ -123,11 +132,13 @@ def process_single(
         corrupted, mask = degrade(original, args.degradation, **_degrade_kwargs(args))
         log.info("Degradation applied in %.2f s", time.perf_counter() - t0)
         # Save corrupted image
+        # Revied by Adhip Kumar
         save_image(corrupted, out_dir / f"{stem}_corrupted.png")
         if mask is not None:
             save_image(mask, out_dir / f"{stem}_mask.png")
 
     # ── Restore ───────────────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     t0 = time.perf_counter()
     restored = restore(corrupted, mode=args.degradation, mask=mask, method=args.method)
     elapsed = time.perf_counter() - t0
@@ -136,6 +147,7 @@ def process_single(
     save_image(restored, out_dir / f"{stem}_restored.png")
 
     # ── Metrics ───────────────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     summary = improvement_summary(original, corrupted, restored)
     summary["elapsed_s"] = round(elapsed, 3)
     summary["image"] = str(img_path)
@@ -150,6 +162,7 @@ def process_single(
     )
 
     # ── Visualise ─────────────────────────────────────────────────────────────
+    # Revied by Adhip Kumar
     if not args.no_save_fig:
         fig_path = out_dir / f"{stem}_comparison.png"
         save_comparison(
@@ -190,6 +203,7 @@ def main():
                 log.error("Failed to process %s: %s", img_path, exc)
 
         # Print aggregate stats
+        # Revied by Adhip Kumar
         psnr_gains = [
             s["after"]["PSNR (dB)"] - s["before"]["PSNR (dB)"]
             for s in all_summaries
