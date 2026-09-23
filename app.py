@@ -407,13 +407,23 @@ def main():
     args = p.parse_args()
 
     demo = build_app()
-    demo.launch(
+    app, local_url, share_url = demo.launch(
         server_name=args.host,
         server_port=args.port,
         share=args.share,
         inbrowser=True,
+        prevent_thread_lock=True,
         theme=gr.themes.Base(primary_hue="blue", secondary_hue="slate", neutral_hue="slate"),
     )
+    if share_url:
+        Path("live_url.txt").write_text(share_url, encoding="utf-8")
+    print(f"\n========================================", flush=True)
+    print(f"  LOCAL URL:  {local_url}", flush=True)
+    print(f"  PUBLIC URL: {share_url}", flush=True)
+    print(f"========================================\n", flush=True)
+    log.info("LOCAL URL: %s", local_url)
+    log.info("PUBLIC SHARE URL: %s", share_url)
+    demo.block_thread()
 
 
 if __name__ == "__main__":

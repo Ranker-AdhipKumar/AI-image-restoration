@@ -9,15 +9,12 @@ scipy>=1.11.0
 torch>=2.1.0
 torchvision>=0.16.0
 
-# Pretrained restoration models
-basicsr>=1.4.2                  # NAFNet / SCUNet architectures + weight downloader
-simple-lama-inpainting>=0.1.0   # LaMa inpainting
-
 # Perceptual metric
 lpips>=0.1.4
 
-# Web UI
+# Web UI & Data
 gradio>=4.10.0
+pandas>=2.0.0
 
 # Utilities
 requests>=2.31.0

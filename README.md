@@ -1,3 +1,15 @@
+---
+title: AI Image Restoration System
+emoji: 🖼️
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: 6.28.0
+app_file: app.py
+pinned: false
+license: mit
+---
+
 # 🖼️ AI-Based Image Restoration System
 
 A modular deep learning + classical CV pipeline that reconstructs images degraded by **noise**, **blur**, **missing regions**, and **compression artifacts** — with a full **Gradio web UI**, **CLI**, and quantitative evaluation via **PSNR**, **SSIM**, and **LPIPS**.
