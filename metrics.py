@@ -17,7 +17,7 @@ from utils import get_logger
 log = get_logger(__name__)
 
 # ─── Lazy LPIPS loader ───────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 _lpips_fn: Any = None
 
@@ -29,7 +29,7 @@ def _get_lpips():
             import torch
             from pathlib import Path
             # Avoid downloading 244MB AlexNet model over web requests on CPU
-            # Revied by Adhip Kumar
+            # Reviewed by Adhip Kumar
             hub_dir = Path(torch.hub.get_dir()) / "checkpoints"
             alexnet_cached = any("alexnet" in f.name.lower() for f in hub_dir.glob("*.pth")) if hub_dir.exists() else False
             if not alexnet_cached and not torch.cuda.is_available():
@@ -47,7 +47,7 @@ def _get_lpips():
 
 
 # ─── Individual metrics ───────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def compute_psnr(reference: np.ndarray, restored: np.ndarray) -> float:
     """
@@ -85,7 +85,7 @@ def compute_lpips(reference: np.ndarray, restored: np.ndarray) -> float:
 
     def _to_tensor(arr: np.ndarray):
         # Expects float32 in [-1, 1], shape [1, 3, H, W]
-        # Revied by Adhip Kumar
+        # Reviewed by Adhip Kumar
         t = torch.from_numpy(arr.astype(np.float32) / 127.5 - 1.0)
         return t.permute(2, 0, 1).unsqueeze(0)
 
@@ -95,7 +95,7 @@ def compute_lpips(reference: np.ndarray, restored: np.ndarray) -> float:
 
 
 # ─── Unified scorer ──────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def compute_all(
     reference: np.ndarray,
@@ -113,7 +113,7 @@ def compute_all(
     dict with keys "PSNR", "SSIM", "LPIPS"
     """
     # Ensure same spatial size
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     if reference.shape != restored.shape:
         import cv2
         restored = cv2.resize(

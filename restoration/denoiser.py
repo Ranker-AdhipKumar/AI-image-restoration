@@ -26,20 +26,20 @@ log = get_logger(__name__)
 
 # ─── URLs for pretrained weights ─────────────────────────────────────────────
 # NAFNet-SIDD (width=64) trained by megvii-research
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 _NAFNET_URL  = ("https://github.com/megvii-research/NAFNet/releases/download"
                 "/v0.0.1/NAFNet-SIDD-width64.pth")
 _NAFNET_FILE = "NAFNet-SIDD-width64.pth"
 
 # DnCNN blind colour denoiser trained by cszn/KAIR
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 _DNCNN_URL   = ("https://github.com/cszn/KAIR/releases/download"
                 "/v1.0/dncnn_color_blind.pth")
 _DNCNN_FILE  = "dncnn_color_blind.pth"
 
 
 # ─── DnCNN architecture ───────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 class _DnCNN:
     """17-layer DnCNN for blind Gaussian denoising (residual learning)."""
@@ -62,7 +62,7 @@ class _DnCNN:
 
 
 # ─── NAFNet (via basicsr) ─────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 @functools.lru_cache(maxsize=1)
 def _load_nafnet(auto_download: bool = False):
@@ -103,7 +103,7 @@ def _load_dncnn(auto_download: bool = False):
             return None
 
         # Build the DnCNN graph (channels=3 for colour, 17 layers)
-        # Revied by Adhip Kumar
+        # Reviewed by Adhip Kumar
         layers = [nn.Conv2d(3, 64, 3, padding=1), nn.ReLU(inplace=True)]
         for _ in range(15):
             layers += [
@@ -116,7 +116,7 @@ def _load_dncnn(auto_download: bool = False):
 
         state = torch.load(weights_path, map_location="cpu", weights_only=True)
         # KAIR state dict may be wrapped
-        # Revied by Adhip Kumar
+        # Reviewed by Adhip Kumar
         if "params" in state:
             state = state["params"]
         model.load_state_dict(state, strict=False)
@@ -129,7 +129,7 @@ def _load_dncnn(auto_download: bool = False):
 
 
 # ─── Individual denoising methods ─────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def _denoise_nafnet(img: np.ndarray) -> Optional[np.ndarray]:
     model = _load_nafnet()
@@ -158,7 +158,7 @@ def _denoise_dncnn(img: np.ndarray) -> Optional[np.ndarray]:
         tensor_in = array_to_tensor(x)
         with torch.no_grad():
             # DnCNN predicts the residual (noise); output = input − residual
-            # Revied by Adhip Kumar
+            # Reviewed by Adhip Kumar
             residual = model(tensor_in)
             tensor_out = (tensor_in - residual).clamp(0, 1)
         out = tensor_to_array(tensor_out)
@@ -195,7 +195,7 @@ def _denoise_nlm(img: np.ndarray) -> np.ndarray:
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def denoise(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndarray:
     """
@@ -222,7 +222,7 @@ def denoise(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndarray:
         return _denoise_nlm(img)
 
     # "auto" — cascade
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     try:
         import torch
         if torch.cuda.is_available():

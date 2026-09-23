@@ -44,11 +44,11 @@ def make_comparison_figure(
     fig = Figure(figsize=(15, 7), facecolor="#0f0f14")
 
     # --- title ---
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     fig.suptitle(title, color="white", fontsize=14, fontweight="bold", y=0.98)
 
     # --- image panels ---
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     gs_top = gridspec.GridSpec(1, 5, figure=fig, top=0.90, bottom=0.45,
                                wspace=0.04, hspace=0.1)
 
@@ -83,7 +83,7 @@ def make_comparison_figure(
             spine.set_visible(True)
 
     # --- metrics bars ---
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     gs_bot = gridspec.GridSpec(1, 3, figure=fig, top=0.38, bottom=0.06,
                                wspace=0.35, hspace=0.2,
                                left=0.05, right=0.95)

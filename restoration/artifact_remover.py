@@ -52,7 +52,7 @@ def _remove_nlm(img: np.ndarray) -> np.ndarray:
     """OpenCV Non-Local Means tuned for JPEG block artifacts."""
     # h=6 hColor=6 are empirically good for JPEG artifacts (less smoothing than
     # for Gaussian noise, to preserve texture detail)
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     return cv2.fastNlMeansDenoisingColored(
         img, None, h=6, hColor=6, templateWindowSize=7, searchWindowSize=21
     )
@@ -83,7 +83,7 @@ def remove_artifacts(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndar
         return _remove_nlm(img)
 
     # "auto" cascade
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     try:
         import torch
         if torch.cuda.is_available():

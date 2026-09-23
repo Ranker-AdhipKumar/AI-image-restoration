@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image
 
 # ─── Logging ──────────────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
@@ -25,7 +25,7 @@ def get_logger(name: str) -> logging.Logger:
 
 
 # ─── Image I/O ────────────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def load_image(path: Union[str, Path]) -> np.ndarray:
     """Load an image as uint8 RGB numpy array [H, W, 3]."""
@@ -50,7 +50,7 @@ def array_to_pil(img: np.ndarray) -> Image.Image:
 
 
 # ─── Dtype conversions ────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def to_float32(img: np.ndarray) -> np.ndarray:
     """Convert uint8 [0, 255] → float32 [0.0, 1.0]."""
@@ -63,7 +63,7 @@ def to_uint8(img: np.ndarray) -> np.ndarray:
 
 
 # ─── Geometry ─────────────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def resize_if_larger(img: np.ndarray, max_dim: int = 768) -> np.ndarray:
     """Resize so the largest spatial dimension does not exceed *max_dim*."""
@@ -97,7 +97,7 @@ def unpad(img: np.ndarray, padding: tuple[int, int]) -> np.ndarray:
 
 
 # ─── Tensor ↔ array helpers (used by PyTorch models) ─────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def array_to_tensor(img: np.ndarray):
     """uint8 [H,W,3] → float32 tensor [1,3,H,W] in [0,1]."""
@@ -113,7 +113,7 @@ def tensor_to_array(t) -> np.ndarray:
 
 
 # ─── Model weight helpers ─────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 WEIGHTS_DIR = Path(__file__).parent / "weights"
 

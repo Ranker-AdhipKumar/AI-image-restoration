@@ -25,7 +25,7 @@ from utils import (
 log = get_logger(__name__)
 
 # ─── URLs ─────────────────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 _NAFNET_GOPRO_URL  = ("https://github.com/megvii-research/NAFNet/releases/download"
                       "/v0.0.1/NAFNet-GoPro-width64.pth")
@@ -33,7 +33,7 @@ _NAFNET_GOPRO_FILE = "NAFNet-GoPro-width64.pth"
 
 
 # ─── Model loaders ────────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 @functools.lru_cache(maxsize=1)
 def _load_nafnet_gopro(auto_download: bool = False):
@@ -61,7 +61,7 @@ def _load_nafnet_gopro(auto_download: bool = False):
 
 
 # ─── Deblurring methods ───────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def _deblur_nafnet(img: np.ndarray) -> Optional[np.ndarray]:
     model = _load_nafnet_gopro()
@@ -122,7 +122,7 @@ def _deblur_unsharp(img: np.ndarray, sigma: float = 2.0, amount: float = 1.5) ->
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def deblur(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndarray:
     """
@@ -150,7 +150,7 @@ def deblur(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndarray:
         return _deblur_unsharp(img)
 
     # "auto" cascade
-    # Revied by Adhip Kumar
+    # Reviewed by Adhip Kumar
     try:
         import torch
         if torch.cuda.is_available():

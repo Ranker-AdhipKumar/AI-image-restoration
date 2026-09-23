@@ -58,14 +58,14 @@ class NAFBlock(nn.Module):
         self.conv3 = nn.Conv2d(in_channels=dw_channel // 2, out_channels=c, kernel_size=1, padding=0, stride=1, groups=1, bias=True)
 
         # Simplified Channel Attention
-        # Revied by Adhip Kumar
+        # Reviewed by Adhip Kumar
         self.sca = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
             nn.Conv2d(in_channels=dw_channel // 2, out_channels=dw_channel // 2, kernel_size=1, padding=0, stride=1, groups=1, bias=True),
         )
 
         # SimpleGate
-        # Revied by Adhip Kumar
+        # Reviewed by Adhip Kumar
         self.sg = SimpleGate()
 
         ffn_channel = FFN_Expand * c

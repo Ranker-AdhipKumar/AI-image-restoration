@@ -19,7 +19,7 @@ log = get_logger(__name__)
 
 
 # ─── Individual degradation functions ────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 def add_gaussian_noise(img: np.ndarray, sigma: float = 25.0) -> np.ndarray:
     """Add additive white Gaussian noise (AWGN)."""
@@ -129,7 +129,7 @@ def add_mixed_degradation(img: np.ndarray) -> np.ndarray:
 
 
 # ─── Unified entry point ──────────────────────────────────────────────────────
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 MODES = {
     "noise":        "Gaussian Noise",

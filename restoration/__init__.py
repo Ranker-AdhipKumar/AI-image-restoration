@@ -1,5 +1,5 @@
 # Unified restoration pipeline
-# Revied by Adhip Kumar
+# Reviewed by Adhip Kumar
 
 """
 restoration/__init__.py — Unified restoration pipeline.
