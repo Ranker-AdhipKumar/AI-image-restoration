@@ -212,29 +212,20 @@ def build_app() -> gr.Blocks:
         # ── Header ────────────────────────────────────────────────────────────
         gr.HTML(f"""
         <style>{css}</style>
-        <div style="text-align:center; padding:22px 0 14px;">
-          <div style="display:inline-flex; align-items:center; gap:8px; padding:4px 14px; border-radius:999px;
-                      background:linear-gradient(90deg, rgba(71,85,105,0.45) 0%, rgba(56,189,248,0.22) 100%);
-                      border:1px solid rgba(148,163,184,0.30); font-size:0.82rem; color:#cbd5e1; margin-bottom:12px;">
-            <span>🌑 Degraded & Desaturated</span>
-            <span style="opacity:0.6;">➔</span>
-            <span style="color:#60a5fa; font-weight:600;">✨ Reconstructed & Vivid</span>
-          </div>
-          <h1 style="display:inline-flex; align-items:center; justify-content:center; gap:14px; font-size:2.3rem; font-weight:800; letter-spacing:-0.5px; margin:0;">
-            <span style="display:inline-flex; align-items:center; justify-content:center; width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, rgba(56,189,248,0.2) 0%, rgba(139,92,246,0.3) 100%); border:1px solid rgba(96,165,250,0.45); box-shadow:0 0 20px rgba(56,189,248,0.3);">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-                <path d="M15 5l1.5-1.5L18 5"/>
-                <path d="M19.5 9.5l1-1"/>
-              </svg>
-            </span>
-            <span style="background:linear-gradient(90deg, #e2e8f0 0%, #60a5fa 50%, #c084fc 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        <div style="text-align:center; padding:24px 0 8px;">
+          <h1 style="font-size:2.2rem; font-weight:800; margin:0; display:flex; align-items:center; justify-content:center; gap:12px;">
+            <svg style="flex-shrink:0;" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+              <path d="M15 5l1.5-1.5L18 5"/>
+              <path d="M19.5 9.5l1-1"/>
+            </svg>
+            <span style="background:linear-gradient(90deg, #60a5fa, #a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
               AI Image Restoration System
             </span>
           </h1>
-          <p style="color:#94a3b8; font-size:1.02rem; margin-top:8px; max-width:640px; margin-left:auto; margin-right:auto;">
+          <p style="color:#94a3b8; font-size:1rem; margin-top:6px;">
             Reconstruct images degraded by noise · blur · missing regions · compression artifacts
           </p>
         </div>
