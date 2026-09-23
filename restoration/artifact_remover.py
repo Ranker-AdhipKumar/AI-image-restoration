@@ -82,17 +82,22 @@ def remove_artifacts(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndar
         return _remove_nlm(img)
 
     # "auto" cascade
-    log.info("ArtifactRemover: trying DnCNN …")
-    out = _remove_dncnn(img)
-    if out is not None:
-        log.info("ArtifactRemover: used DnCNN.")
-        return out
+    try:
+        import torch
+        if torch.cuda.is_available():
+            log.info("ArtifactRemover: CUDA detected, trying DnCNN …")
+            out = _remove_dncnn(img)
+            if out is not None:
+                log.info("ArtifactRemover: used DnCNN.")
+                return out
 
-    log.info("ArtifactRemover: trying NAFNet …")
-    out = _remove_nafnet(img)
-    if out is not None:
-        log.info("ArtifactRemover: used NAFNet.")
-        return out
+            log.info("ArtifactRemover: trying NAFNet …")
+            out = _remove_nafnet(img)
+            if out is not None:
+                log.info("ArtifactRemover: used NAFNet.")
+                return out
+    except Exception as exc:
+        log.warning("Deep learning artifact removal check failed (%s); proceeding to TV.", exc)
 
-    log.info("ArtifactRemover: falling back to Total-Variation (Chambolle).")
+    log.info("ArtifactRemover: using Total-Variation (Chambolle) denoising.")
     return _remove_tv(img)

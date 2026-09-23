@@ -110,11 +110,16 @@ def inpaint(img: np.ndarray, mask: np.ndarray, method: str = "auto", **kwargs) -
         return _inpaint_telea(img, mask)
 
     # "auto" cascade
-    log.info("Inpainter: trying LaMa …")
-    out = _inpaint_lama(img, mask)
-    if out is not None:
-        log.info("Inpainter: used LaMa.")
-        return out
+    try:
+        import torch
+        if torch.cuda.is_available():
+            log.info("Inpainter: CUDA detected, trying LaMa …")
+            out = _inpaint_lama(img, mask)
+            if out is not None:
+                log.info("Inpainter: used LaMa.")
+                return out
+    except Exception as exc:
+        log.warning("Deep learning inpainting check failed (%s); proceeding to Navier-Stokes.", exc)
 
-    log.info("Inpainter: falling back to Navier-Stokes.")
+    log.info("Inpainter: using OpenCV Navier-Stokes inpainting.")
     return _inpaint_navier_stokes(img, mask)

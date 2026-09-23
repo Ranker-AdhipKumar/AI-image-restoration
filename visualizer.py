@@ -1,5 +1,6 @@
 """
 visualizer.py — Matplotlib-based side-by-side comparison figures.
+Thread-safe implementation avoiding pyplot global state.
 """
 from __future__ import annotations
 
@@ -7,9 +8,8 @@ import io
 from pathlib import Path
 from typing import Optional
 
-import matplotlib
-matplotlib.use("Agg")  # non-interactive backend — safe for Gradio / CLI
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 import matplotlib.gridspec as gridspec
 import numpy as np
 from PIL import Image
@@ -17,9 +17,6 @@ from PIL import Image
 from utils import get_logger
 
 log = get_logger(__name__)
-
-
-# ─── Colour-map for difference heatmap ────────────────────────────────────────
 
 _DIFF_CMAP = "hot"
 
@@ -30,8 +27,6 @@ def _pixel_diff(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return diff.mean(axis=2)  # [H, W]
 
 
-# ─── Main figure builder ──────────────────────────────────────────────────────
-
 def make_comparison_figure(
     original: np.ndarray,
     corrupted: np.ndarray,
@@ -40,16 +35,16 @@ def make_comparison_figure(
     metrics_after: dict,
     title: str = "Image Restoration",
     mask: Optional[np.ndarray] = None,
-) -> plt.Figure:
+) -> Figure:
     """
-    Build a 5-panel matplotlib figure:
+    Build a 5-panel comparison figure thread-safely:
       [Original | Corrupted | Restored | Diff(corr) | Diff(rest)]
     with metric bar charts below.
     """
-    fig = plt.figure(figsize=(18, 8), facecolor="#0f0f14")
+    fig = Figure(figsize=(15, 7), facecolor="#0f0f14")
 
     # --- title ---
-    fig.suptitle(title, color="white", fontsize=15, fontweight="bold", y=0.98)
+    fig.suptitle(title, color="white", fontsize=14, fontweight="bold", y=0.98)
 
     # --- image panels ---
     gs_top = gridspec.GridSpec(1, 5, figure=fig, top=0.90, bottom=0.45,
@@ -57,7 +52,7 @@ def make_comparison_figure(
 
     diff_corr = _pixel_diff(original, corrupted)
     diff_rest = _pixel_diff(original, restored)
-    vmax = max(diff_corr.max(), diff_rest.max(), 1.0)
+    vmax = max(float(diff_corr.max()), float(diff_rest.max()), 1.0)
 
     panels = [
         (original,   "Original",         None),
@@ -71,13 +66,13 @@ def make_comparison_figure(
         ax = fig.add_subplot(gs_top[col])
         if cmap:
             im = ax.imshow(data, cmap=cmap, vmin=0, vmax=vmax)
-            plt.colorbar(im, ax=ax, fraction=0.046, pad=0.02,
-                         label="pixel Δ").ax.yaxis.set_tick_params(color="white")
+            cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
+            cbar.set_label("pixel Δ", color="white", fontsize=8)
+            cbar.ax.yaxis.set_tick_params(color="white", labelcolor="white", labelsize=7)
         else:
             ax.imshow(data)
         ax.set_title(panel_title, color="white", fontsize=9, pad=4)
         ax.axis("off")
-        # coloured border
         border_color = {"Original": "#4ade80", "Corrupted": "#f87171",
                         "Restored": "#60a5fa"}.get(panel_title, "#94a3b8")
         for spine in ax.spines.values():
@@ -112,7 +107,6 @@ def make_comparison_figure(
                 edgecolor="white",
                 linewidth=0.6,
             )
-            # value labels on bars
             for bar in bars:
                 h = bar.get_height()
                 ax.text(
@@ -122,8 +116,7 @@ def make_comparison_figure(
                     ha="center", va="bottom", fontsize=8, color="white",
                 )
 
-            # arrow indicating improvement direction
-            arrow_up = m_name != "LPIPS"  # PSNR/SSIM: higher=better; LPIPS: lower=better
+            arrow_up = m_name != "LPIPS"
             improvement = (a_val > b_val) if arrow_up else (a_val < b_val)
             arrow_sym = ("↑" if improvement else "↓")
             arrow_color = "#4ade80" if improvement else "#f87171"
@@ -145,20 +138,18 @@ def make_comparison_figure(
     return fig
 
 
-# ─── Convenience helpers ──────────────────────────────────────────────────────
-
-def fig_to_pil(fig: plt.Figure) -> Image.Image:
-    """Convert a matplotlib figure to a PIL Image (RGB)."""
+def fig_to_pil(fig: Figure) -> Image.Image:
+    """Convert a matplotlib Figure to a PIL Image (RGB) thread-safely."""
+    canvas = FigureCanvasAgg(fig)
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=120, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
+    canvas.print_png(buf)
     buf.seek(0)
-    plt.close(fig)
-    return Image.open(buf).convert("RGB")
+    img = Image.open(buf).convert("RGB")
+    fig.clear()
+    return img
 
 
-def fig_to_array(fig: plt.Figure) -> np.ndarray:
-    """Convert a matplotlib figure to a uint8 RGB numpy array."""
+def fig_to_array(fig: Figure) -> np.ndarray:
     return np.array(fig_to_pil(fig))
 
 
@@ -172,14 +163,14 @@ def save_comparison(
     title: str = "Image Restoration",
     mask=None,
 ) -> Path:
-    """Build the comparison figure and save it to *output_path*."""
     fig = make_comparison_figure(
         original, corrupted, restored, metrics_before, metrics_after, title, mask
     )
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=120, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
+    canvas = FigureCanvasAgg(fig)
+    canvas.print_figure(str(output_path), dpi=90, bbox_inches="tight",
+                        facecolor=fig.get_facecolor())
+    fig.clear()
     log.info("Comparison figure saved to %s", output_path)
     return output_path

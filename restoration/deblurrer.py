@@ -146,11 +146,16 @@ def deblur(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndarray:
         return _deblur_unsharp(img)
 
     # "auto" cascade
-    log.info("Deblurrer: trying NAFNet-GoPro …")
-    out = _deblur_nafnet(img)
-    if out is not None:
-        log.info("Deblurrer: used NAFNet-GoPro.")
-        return out
+    try:
+        import torch
+        if torch.cuda.is_available():
+            log.info("Deblurrer: CUDA detected, trying NAFNet-GoPro …")
+            out = _deblur_nafnet(img)
+            if out is not None:
+                log.info("Deblurrer: used NAFNet-GoPro.")
+                return out
+    except Exception as exc:
+        log.warning("Deep learning deblurring check failed (%s); proceeding to Wiener.", exc)
 
-    log.info("Deblurrer: falling back to Wiener deconvolution.")
+    log.info("Deblurrer: using Wiener deconvolution.")
     return _deblur_wiener(img)

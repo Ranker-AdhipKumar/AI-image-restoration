@@ -213,17 +213,22 @@ def denoise(img: np.ndarray, method: str = "auto", **kwargs) -> np.ndarray:
         return _denoise_nlm(img)
 
     # "auto" — cascade
-    log.info("Denoiser: trying NAFNet …")
-    out = _denoise_nafnet(img)
-    if out is not None:
-        log.info("Denoiser: used NAFNet-SIDD.")
-        return out
+    try:
+        import torch
+        if torch.cuda.is_available():
+            log.info("Denoiser: CUDA detected, trying NAFNet …")
+            out = _denoise_nafnet(img)
+            if out is not None:
+                log.info("Denoiser: used NAFNet-SIDD.")
+                return out
 
-    log.info("Denoiser: trying DnCNN …")
-    out = _denoise_dncnn(img)
-    if out is not None:
-        log.info("Denoiser: used DnCNN.")
-        return out
+            log.info("Denoiser: trying DnCNN …")
+            out = _denoise_dncnn(img)
+            if out is not None:
+                log.info("Denoiser: used DnCNN.")
+                return out
+    except Exception as exc:
+        log.warning("Deep learning denoising check failed (%s); proceeding to wavelet.", exc)
 
-    log.info("Denoiser: falling back to BayesShrink wavelet.")
+    log.info("Denoiser: using fast BayesShrink wavelet denoising.")
     return _denoise_wavelet(img)
