@@ -23,13 +23,16 @@ A modular deep learning + classical CV pipeline that reconstructs images degrade
 
 ## ✨ Features
 
-- **4 degradation types** with tunable parameters
-- **Cascading restoration architecture** — state-of-the-art DL models with automatic fallback to classical methods
-- **3 image quality metrics**: PSNR (signal fidelity), SSIM (structural similarity), LPIPS (perceptual)
-- **Gradio web UI** with single-image, sample gallery, and batch evaluation tabs
-- **CLI** supporting single-image and directory batch processing
-- **Matplotlib comparison dashboard**: side-by-side panels + pixel difference heatmaps + metric bar charts
-- **44 benchmark sample images** downloadable out of the box (Kodak, CBSD68, synthetic)
+- **🩺 AI Auto-Diagnosis Engine**: Referenceless defect detection (noise level σ, edge sharpness index, JPEG 8x8 blockiness ratio, dynamic range) without needing ground truth.
+- **✨ Real-World Blind Restoration**: One-click auto-pilot restoration for real vintage scans, blurry photos, noisy low-light shots, and compressed web images.
+- **4 synthetic degradation modes** with tunable parameters for benchmarking and algorithmic experimentation.
+- **Cascading restoration architecture** — state-of-the-art DL models (NAFNet, DnCNN, LaMa) with automatic fallback to robust classical methods.
+- **Full Quality Metrics Suite**: Both Full-Reference (PSNR, SSIM, LPIPS) and No-Reference (BIQS 0-100, estimated noise σ, sharpness, blockiness ratio).
+- **Gradio web UI** with dedicated Real-World Restoration, Single-Image simulation, Sample Gallery, and Batch Evaluation tabs.
+- **CLI** supporting blind diagnosis, real-world enhancement, and synthetic batch benchmarking.
+- **Matplotlib comparison dashboards**: 4-panel blind diagnostic residual maps + 5-panel full-reference heatmaps and metric charts.
+- **44 benchmark sample images** downloadable out of the box (Kodak, CBSD68, synthetic).
+
 
 ---
 
@@ -113,10 +116,16 @@ Open **http://127.0.0.1:7860** in your browser.
 ## 💻 CLI Usage
 
 ```bash
-# Denoise a noisy image
+# 🩺 1. Blindly diagnose defects on a real photo (no ground truth needed)
+python main.py --input old_photo.jpg --diagnose
+
+# ✨ 2. Restore a real-world degraded image directly using AI auto-restoration
+python main.py --input old_photo.jpg --real-world --output results/
+
+# 🔬 3. Simulate degradation & restore with benchmark evaluation
 python main.py --input photo.jpg --degradation noise --sigma 30 --output results/
 
-# Deblur
+# Deblur with Wiener deconvolution
 python main.py --input photo.jpg --degradation blur --kernel-size 15 --method wiener
 
 # Fill missing regions
@@ -136,10 +145,13 @@ python main.py --input photo.jpg --degradation noise --json
 
 | Flag | Description | Default |
 |---|---|---|
-| `--degradation` | `noise`, `salt_pepper`, `blur`, `motion_blur`, `inpaint`, `artifact`, `mixed` | required |
+| `--diagnose` | Run blind defect diagnosis without ground truth | `False` |
+| `--real-world` | Restore a real-world degraded image using blind auto-restoration | `False` |
+| `--degradation` | `noise`, `salt_pepper`, `blur`, `motion_blur`, `inpaint`, `artifact`, `mixed` | required (for simulation) |
 | `--method` | `auto`, `nafnet`, `dncnn`, `wavelet`, `nlm`, `wiener`, `rl`, `lama`, `ns`, `telea`, `tv` | `auto` |
 | `--max-dim` | Resize image so max dimension ≤ this value | `768` |
 | `--sigma` | Gaussian noise level | `25` |
+
 | `--kernel-size` | Blur kernel size | `15` |
 | `--quality` | JPEG quality (1=worst, 50=moderate) | `10` |
 | `--n-patches` | Number of inpainting mask patches | `3` |

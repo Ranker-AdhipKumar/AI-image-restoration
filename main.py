@@ -38,12 +38,15 @@ from pathlib import Path
 import numpy as np
 
 from degradation import degrade, MODES
+from diagnostics import diagnose_image
 from metrics import compute_all, improvement_summary
 from restoration import restore
+from restoration.blind_restorer import restore_blind
 from utils import load_image, save_image, resize_if_larger, get_logger
-from visualizer import save_comparison
+from visualizer import save_comparison, save_blind_comparison
 
 log = get_logger("main")
+
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp"}
 
@@ -57,8 +60,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p.add_argument("--input", "-i", required=True,
                    help="Path to input image file or directory (for --batch mode)")
-    p.add_argument("--degradation", "-d", required=True, choices=list(MODES.keys()),
-                   help="Degradation type to simulate (or 'inpaint' if pre-masked)")
+    p.add_argument("--degradation", "-d", choices=list(MODES.keys()), default=None,
+                   help="Degradation type to simulate (required for simulation mode)")
+    p.add_argument("--diagnose", action="store_true",
+                   help="Run blind defect diagnosis on input image without ground truth")
+    p.add_argument("--real-world", action="store_true",
+                   help="Restore a real-world degraded image directly using blind auto-restoration (no synthetic degradation)")
     p.add_argument("--output", "-o", default="./results",
                    help="Output directory (default: ./results)")
     p.add_argument("--method", default="auto",
@@ -74,6 +81,7 @@ def _build_parser() -> argparse.ArgumentParser:
                    help="Process all images in --input directory")
     p.add_argument("--json", action="store_true",
                    help="Print final metrics as JSON to stdout")
+
 
     # Degradation parameters
     # Reviewed by Adhip Kumar
@@ -177,14 +185,77 @@ def process_single(
     return summary
 
 
+def process_single_diagnose(img_path: Path, args: argparse.Namespace) -> dict:
+    """Diagnose defects on a single image without ground truth."""
+    # Reviewed by Adhip Kumar
+    log.info("=" * 60)
+    log.info("Diagnosing defects: %s", img_path)
+    original = load_image(img_path)
+    original = resize_if_larger(original, args.max_dim)
+    diag = diagnose_image(original)
+
+    log.info("Diagnosis: %s (%s) | BIQS: %.1f/100 | Noise σ: %.1f | Sharpness: %.1f | Blockiness: %.2fx",
+             diag["primary_defect"], diag["severity"], diag["biqs"],
+             diag["noise"]["estimated_sigma"], diag["sharpness"]["sharpness_score"],
+             diag["blockiness"]["blockiness_ratio"])
+    log.info("Prescribed: %s", ", ".join(r["label"] for r in diag["recipe"]))
+
+    diag["image"] = str(img_path)
+    return diag
+
+
+def process_single_real_world(img_path: Path, args: argparse.Namespace, out_dir: Path) -> dict:
+    """Restore a real-world image without synthetic degradation."""
+    # Reviewed by Adhip Kumar
+    stem = img_path.stem
+    log.info("=" * 60)
+    log.info("Real-world blind restoration: %s", img_path)
+    original = load_image(img_path)
+    original = resize_if_larger(original, args.max_dim)
+
+    restored, steps, diag_b, diag_a, imp = restore_blind(original, auto=True)
+    save_image(restored, out_dir / f"{stem}_restored.png")
+
+    if not args.no_save_fig:
+        # Reviewed by Adhip Kumar
+        fig_path = out_dir / f"{stem}_blind_comparison.png"
+        save_blind_comparison(original, restored, diag_b, diag_a, fig_path)
+
+    log.info("BIQS: %.1f -> %.1f (+%.1f pts) | Noise σ: %.1f -> %.1f | Steps: %s",
+             imp["biqs_before"], imp["biqs_after"], imp["biqs_delta"],
+             diag_b["noise"]["estimated_sigma"], diag_a["noise"]["estimated_sigma"],
+             ", ".join(steps))
+
+    return {
+        "image": str(img_path),
+        "steps": steps,
+        "improvement": imp,
+        "diagnosis_before": diag_b,
+        "diagnosis_after": diag_a,
+    }
+
+
 def main():
     parser = _build_parser()
     args   = parser.parse_args()
+
+    if not args.diagnose and not args.real_world and not args.degradation:
+        # Reviewed by Adhip Kumar
+        parser.error("--degradation is required unless --diagnose or --real-world is specified.")
 
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     inp = Path(args.input)
+
+    # Select processing function
+    # Reviewed by Adhip Kumar
+    if args.diagnose:
+        processor = lambda p: process_single_diagnose(p, args)
+    elif args.real_world:
+        processor = lambda p: process_single_real_world(p, args, out_dir)
+    else:
+        processor = lambda p: process_single(p, args, out_dir)
 
     if args.batch:
         if not inp.is_dir():
@@ -197,20 +268,29 @@ def main():
         all_summaries = []
         for img_path in paths:
             try:
-                s = process_single(img_path, args, out_dir)
+                s = processor(img_path)
                 all_summaries.append(s)
             except Exception as exc:
                 log.error("Failed to process %s: %s", img_path, exc)
 
         # Print aggregate stats
         # Reviewed by Adhip Kumar
-        psnr_gains = [
-            s["after"]["PSNR (dB)"] - s["before"]["PSNR (dB)"]
-            for s in all_summaries
-            if isinstance(s["after"]["PSNR (dB)"], float)
-        ]
-        if psnr_gains:
-            log.info("Average PSNR gain: +%.2f dB over %d images", np.mean(psnr_gains), len(psnr_gains))
+        if not args.diagnose and not args.real_world:
+            psnr_gains = [
+                s["after"]["PSNR (dB)"] - s["before"]["PSNR (dB)"]
+                for s in all_summaries
+                if isinstance(s.get("after", {}).get("PSNR (dB)"), float)
+            ]
+            if psnr_gains:
+                log.info("Average PSNR gain: +%.2f dB over %d images", np.mean(psnr_gains), len(psnr_gains))
+        elif args.real_world:
+            biqs_gains = [
+                s["improvement"]["biqs_delta"]
+                for s in all_summaries
+                if "improvement" in s and "biqs_delta" in s["improvement"]
+            ]
+            if biqs_gains:
+                log.info("Average BIQS gain: +%.1f pts over %d images", np.mean(biqs_gains), len(biqs_gains))
 
         if args.json:
             print(json.dumps(all_summaries, indent=2))
@@ -218,10 +298,11 @@ def main():
     else:
         if not inp.is_file():
             parser.error(f"Input file not found: {inp}")
-        summary = process_single(inp, args, out_dir)
+        summary = processor(inp)
         if args.json:
             print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":
     main()
+

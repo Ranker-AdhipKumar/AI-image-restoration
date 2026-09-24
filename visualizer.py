@@ -177,3 +177,153 @@ def save_comparison(
     fig.clear()
     log.info("Comparison figure saved to %s", output_path)
     return output_path
+
+
+def make_blind_comparison_figure(
+    original: np.ndarray,
+    restored: np.ndarray,
+    diag_before: dict,
+    diag_after: dict,
+    title: str = "Real-World Blind Image Restoration & Defect Analysis",
+) -> Figure:
+    """
+    Build a comparison dashboard for real-world images without ground truth:
+      Top Row: [Original Real Image | Restored Image | Cleaned Residuals Map | Recovered High-Freq Edges]
+      Bottom Row: [Noise Level σ | Sharpness Index | JPEG Blockiness | Blind Quality Score (BIQS)]
+    # Reviewed by Adhip Kumar
+    """
+    import cv2
+    fig = Figure(figsize=(16, 7.5), facecolor="#0f0f14")
+
+    # --- title ---
+    # Reviewed by Adhip Kumar
+    fig.suptitle(title, color="white", fontsize=15, fontweight="bold", y=0.98)
+
+    # --- Top Row: 4 visual panels ---
+    # Reviewed by Adhip Kumar
+    gs_top = gridspec.GridSpec(1, 4, figure=fig, top=0.90, bottom=0.46,
+                               wspace=0.05, hspace=0.1)
+
+    # 1. Residual / Cleaned Noise map |original - restored|
+    # Reviewed by Adhip Kumar
+    diff = np.abs(original.astype(np.float32) - restored.astype(np.float32)).mean(axis=2)
+    vmax_diff = max(float(diff.max()), 10.0)
+
+    # 2. High-frequency edge map of restored image
+    # Reviewed by Adhip Kumar
+    gray_rest = cv2.cvtColor(restored, cv2.COLOR_RGB2GRAY)
+    sobelx = cv2.Sobel(gray_rest, cv2.CV_32F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(gray_rest, cv2.CV_32F, 0, 1, ksize=3)
+    edge_map = np.sqrt(sobelx**2 + sobely**2)
+    edge_map = np.clip(edge_map / (np.percentile(edge_map, 98) + 1e-5), 0, 1)
+
+    top_panels = [
+        (original, "[Input Real Image]", None),
+        (restored, "[AI Restored Image]", None),
+        (diff,     "[Cleaned Noise & Artifacts Map]", "magma"),
+        (edge_map, "[Recovered Edge & Detail Map]", "viridis"),
+    ]
+
+    for col, (data, panel_title, cmap) in enumerate(top_panels):
+        ax = fig.add_subplot(gs_top[col])
+        if cmap:
+            im = ax.imshow(data, cmap=cmap)
+            cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.02)
+            cbar.set_label("Intensity", color="white", fontsize=8)
+            cbar.ax.yaxis.set_tick_params(color="white", labelcolor="white", labelsize=7)
+        else:
+            ax.imshow(data)
+        ax.set_title(panel_title, color="white", fontsize=10, pad=5)
+        ax.axis("off")
+        border = "#f87171" if col == 0 else ("#4ade80" if col == 1 else "#818cf8")
+        for spine in ax.spines.values():
+            spine.set_edgecolor(border)
+            spine.set_linewidth(2)
+            spine.set_visible(True)
+
+    # --- Bottom Row: 4 Diagnostic Bar Charts ---
+    # Reviewed by Adhip Kumar
+    gs_bot = gridspec.GridSpec(1, 4, figure=fig, top=0.38, bottom=0.08,
+                               wspace=0.32, hspace=0.2,
+                               left=0.05, right=0.95)
+
+    metrics_to_plot = [
+        ("Noise Level (Estimated σ)",
+         diag_before["noise"]["estimated_sigma"],
+         diag_after["noise"]["estimated_sigma"],
+         False,  # lower is better
+         "σ"),
+        ("Sharpness Score",
+         diag_before["sharpness"]["sharpness_score"],
+         diag_after["sharpness"]["sharpness_score"],
+         True,   # higher is better
+         "/100"),
+        ("JPEG Blockiness Ratio",
+         diag_before["blockiness"]["blockiness_ratio"],
+         diag_after["blockiness"]["blockiness_ratio"],
+         False,  # lower is better
+         "x"),
+        ("Blind Quality Score (BIQS)",
+         diag_before["biqs"],
+         diag_after["biqs"],
+         True,   # higher is better
+         " pts"),
+    ]
+
+    for idx, (m_title, b_val, a_val, higher_is_better, unit) in enumerate(metrics_to_plot):
+        ax = fig.add_subplot(gs_bot[idx])
+        ax.set_facecolor("#1e1e2e")
+
+        bars = ax.bar(
+            ["Before", "After"],
+            [b_val, a_val],
+            color=["#f87171", "#38bdf8"],
+            width=0.45,
+            edgecolor="white",
+            linewidth=0.6,
+        )
+
+        for bar in bars:
+            h = bar.get_height()
+            ax.text(
+                bar.get_x() + bar.get_width() / 2,
+                h + 0.02 * max(b_val, a_val, 1.0),
+                f"{h:.1f}{unit}",
+                ha="center", va="bottom", fontsize=8, color="white", fontweight="bold"
+            )
+
+        improved = (a_val > b_val) if higher_is_better else (a_val < b_val)
+        arrow_sym = "↑" if improved else "↓"
+        arrow_color = "#4ade80" if improved else "#f87171"
+        ax.text(0.5, 0.90, arrow_sym, transform=ax.transAxes,
+                ha="center", va="top", fontsize=18, color=arrow_color)
+
+        ax.set_title(m_title, color="white", fontsize=9.5, pad=4)
+        ax.tick_params(colors="white", labelsize=8)
+        for spine in ax.spines.values():
+            spine.set_edgecolor("#4a4a5a")
+
+    fig.patch.set_facecolor("#0f0f14")
+    return fig
+
+
+def save_blind_comparison(
+    original: np.ndarray,
+    restored: np.ndarray,
+    diag_before: dict,
+    diag_after: dict,
+    output_path: str | Path,
+    title: str = "Real-World Blind Image Restoration & Defect Analysis",
+) -> Path:
+    """Save blind comparison figure to disk thread-safely."""
+    # Reviewed by Adhip Kumar
+    fig = make_blind_comparison_figure(original, restored, diag_before, diag_after, title)
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    canvas = FigureCanvasAgg(fig)
+    canvas.print_figure(str(output_path), dpi=90, bbox_inches="tight",
+                        facecolor=fig.get_facecolor())
+    fig.clear()
+    log.info("Blind comparison figure saved to %s", output_path)
+    return output_path
+

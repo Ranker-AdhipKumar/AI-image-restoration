@@ -54,12 +54,20 @@ def restore(
         from restoration.inpainter import inpaint
         return inpaint(degraded, mask, **kwargs)
 
-    elif mode == "artifact":
+    elif mode in ("artifact",):
         from restoration.artifact_remover import remove_artifacts
         return remove_artifacts(degraded, **kwargs)
+
+    elif mode in ("blind", "real_world", "auto_real"):
+        # Real-world blind restoration without ground truth
+        # Reviewed by Adhip Kumar
+        from restoration.blind_restorer import restore_blind
+        restored, _, _, _, _ = restore_blind(degraded, **kwargs)
+        return restored
 
     else:
         raise ValueError(
             f"Unknown restoration mode '{mode}'. "
-            "Valid: noise, salt_pepper, blur, motion_blur, inpaint, artifact, mixed"
+            "Valid: noise, salt_pepper, blur, motion_blur, inpaint, artifact, mixed, blind"
         )
+

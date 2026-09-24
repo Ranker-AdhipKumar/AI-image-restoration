@@ -23,14 +23,17 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent))
 
 from degradation import degrade, MODES
-from metrics import compute_all, improvement_summary
+from diagnostics import diagnose_image
+from metrics import compute_all, improvement_summary, compute_blind_metrics, blind_improvement_summary
 from restoration import restore
+from restoration.blind_restorer import restore_blind
 from utils import pil_to_array, array_to_pil, resize_if_larger, get_logger
-from visualizer import make_comparison_figure, fig_to_pil
+from visualizer import make_comparison_figure, make_blind_comparison_figure, fig_to_pil
 
 log = get_logger("app")
 
 SAMPLE_DIR = Path(__file__).parent / "sample_images"
+
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -112,9 +115,9 @@ def run_pipeline(
     elapsed = time.perf_counter() - t0
 
     # ── Metrics ───────────────────────────────────────────────────────────────
-    # ── Metrics ───────────────────────────────────────────────────────────────
     # Reviewed by Adhip Kumar
     progress(0.70, desc="Computing quality metrics …")
+
     import math
     import pandas as pd
 
@@ -177,8 +180,151 @@ def run_pipeline(
     return array_to_pil(corrupted), array_to_pil(restored), comparison_pil, metrics_df, status
 
 
+# ─── Blind Real-World Pipeline ───────────────────────────────────────────────
+# Reviewed by Adhip Kumar
+
+def format_diagnostic_html(diag: dict) -> str:
+    """Renders a modern, visually stunning diagnostic summary card."""
+    # Reviewed by Adhip Kumar
+    primary = diag.get("primary_defect", "Clean")
+    severity = diag.get("severity", "Optimal")
+    biqs = diag.get("biqs", 0.0)
+    sigma = diag.get("noise", {}).get("estimated_sigma", 0.0)
+    sharp = diag.get("sharpness", {}).get("sharpness_score", 0.0)
+    block = diag.get("blockiness", {}).get("blockiness_ratio", 1.0)
+    recipe = diag.get("recipe", [])
+
+    color_map = {
+        "Needs Restoration": "#ef4444",
+        "Minor Degradation": "#f59e0b",
+        "Optimal": "#10b981",
+    }
+    badge_color = color_map.get(severity, "#60a5fa")
+
+    recipe_items = "".join([f"<li style='margin-bottom:4px;'><b>{r.get('action', '').upper()}:</b> {r.get('label', '')}</li>" for r in recipe])
+    if not recipe_items:
+        # Reviewed by Adhip Kumar
+        recipe_items = "<li>No active restoration steps required.</li>"
+
+    html = f"""
+    <div style="background:rgba(15, 23, 42, 0.75); border:1px solid rgba(148, 163, 184, 0.25); border-radius:12px; padding:16px; margin-bottom:14px; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid rgba(148, 163, 184, 0.15); padding-bottom:8px;">
+        <span style="font-weight:700; font-size:1.05rem; color:#f8fafc; display:flex; align-items:center; gap:8px;">
+          <span>🩺</span> AI Defect Diagnosis Report
+        </span>
+        <span style="background:{badge_color}; color:#fff; font-size:0.75rem; font-weight:700; padding:4px 12px; border-radius:999px;">
+          {primary} · {severity}
+        </span>
+      </div>
+      
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:12px; text-align:center;">
+        <div style="background:rgba(30, 41, 59, 0.65); padding:10px 6px; border-radius:8px; border:1px solid rgba(56, 189, 248, 0.2);">
+          <div style="color:#94a3b8; font-size:0.74rem;">Quality Score (BIQS)</div>
+          <div style="color:#38bdf8; font-size:1.2rem; font-weight:700;">{biqs:.1f}/100</div>
+        </div>
+        <div style="background:rgba(30, 41, 59, 0.65); padding:10px 6px; border-radius:8px; border:1px solid rgba(248, 113, 113, 0.2);">
+          <div style="color:#94a3b8; font-size:0.74rem;">Estimated Noise (σ)</div>
+          <div style="color:#f87171; font-size:1.2rem; font-weight:700;">{sigma:.1f}</div>
+        </div>
+        <div style="background:rgba(30, 41, 59, 0.65); padding:10px 6px; border-radius:8px; border:1px solid rgba(74, 222, 128, 0.2);">
+          <div style="color:#94a3b8; font-size:0.74rem;">Sharpness Index</div>
+          <div style="color:#4ade80; font-size:1.2rem; font-weight:700;">{sharp:.1f}</div>
+        </div>
+        <div style="background:rgba(30, 41, 59, 0.65); padding:10px 6px; border-radius:8px; border:1px solid rgba(192, 132, 252, 0.2);">
+          <div style="color:#94a3b8; font-size:0.74rem;">JPEG Blockiness</div>
+          <div style="color:#c084fc; font-size:1.2rem; font-weight:700;">{block:.2f}x</div>
+        </div>
+      </div>
+
+      <div style="font-size:0.85rem; color:#cbd5e1; background:rgba(2, 6, 23, 0.45); padding:10px 14px; border-radius:8px; border:1px solid rgba(148, 163, 184, 0.15);">
+        <div style="font-weight:600; color:#60a5fa; margin-bottom:4px;">💡 AI Prescribed Restoration Recipe:</div>
+        <ul style="margin:0; padding-left:18px; color:#e2e8f0;">
+          {recipe_items}
+        </ul>
+      </div>
+    </div>
+    """
+    return html
+
+
+def run_blind_pipeline(
+    image_pil: Image.Image | None,
+    max_dim: int,
+    auto_recipe: bool,
+    apply_denoise: bool,
+    apply_deblur: bool,
+    apply_deblock: bool,
+    apply_contrast: bool,
+    progress=gr.Progress(track_tqdm=True),
+) -> tuple:
+    """
+    Blind real-world restoration without ground truth reference.
+    # Reviewed by Adhip Kumar
+    """
+    if image_pil is None:
+        # Reviewed by Adhip Kumar
+        return None, None, None, None, "<p style='color:#f87171;'>⚠️ Please upload an image first.</p>", "⚠️ Please upload an image first."
+
+    # Load and resize
+    # Reviewed by Adhip Kumar
+    progress(0.1, desc="Analyzing image & diagnosing defects …")
+    img_arr = pil_to_array(image_pil)
+    img_arr = resize_if_larger(img_arr, int(max_dim))
+
+    # Execute blind restoration
+    # Reviewed by Adhip Kumar
+    progress(0.35, desc="Executing blind restoration cascade …")
+    restored, steps, diag_b, diag_a, imp = restore_blind(
+        img_arr,
+        auto=auto_recipe,
+        apply_denoise_opt=apply_denoise,
+        apply_deblur_opt=apply_deblur,
+        apply_deblock_opt=apply_deblock,
+        apply_contrast_opt=apply_contrast,
+    )
+
+    # Comparison figure
+    # Reviewed by Adhip Kumar
+    progress(0.75, desc="Building blind comparison figure …")
+    fig = make_blind_comparison_figure(img_arr, restored, diag_b, diag_a)
+    fig_pil = fig_to_pil(fig)
+
+    # Metrics table
+    # Reviewed by Adhip Kumar
+    progress(0.9, desc="Generating quality metric breakdown …")
+    import pandas as pd
+    rows = [
+        ["Blind Quality Score (BIQS)", f"{imp['biqs_before']:.1f}/100", f"{imp['biqs_after']:.1f}/100", f"+{imp['biqs_delta']} pts" if imp['biqs_delta'] >= 0 else f"{imp['biqs_delta']} pts"],
+        ["Estimated Noise (σ)", f"{diag_b['noise']['estimated_sigma']:.1f}", f"{diag_a['noise']['estimated_sigma']:.1f}", f"-{imp['noise_reduction_pct']:.1f}%"],
+        ["Edge Sharpness Index", f"{diag_b['sharpness']['sharpness_score']:.1f}", f"{diag_a['sharpness']['sharpness_score']:.1f}", f"{'+' if imp['sharpness_gain_pct']>=0 else ''}{imp['sharpness_gain_pct']:.1f}%"],
+        ["JPEG Blockiness Ratio", f"{diag_b['blockiness']['blockiness_ratio']:.3f}x", f"{diag_a['blockiness']['blockiness_ratio']:.3f}x", f"-{imp['block_reduction_pct']:.1f}%"],
+    ]
+    df = pd.DataFrame(rows, columns=["Metric", "Degraded Input", "Restored Output", "Relative Improvement"])
+
+    diag_html = format_diagnostic_html(diag_b)
+    status_str = f"Completed in {imp['elapsed_s']:.1f} s | BIQS: {imp['biqs_before']:.1f} -> {imp['biqs_after']:.1f} (+{imp['biqs_delta']:.1f} pts) | {len(steps)} steps applied"
+
+    progress(1.0, desc="Done!")
+    return array_to_pil(img_arr), array_to_pil(restored), fig_pil, df, diag_html, status_str
+
+
+def run_blind_diagnosis_only(image_pil: Image.Image | None, max_dim: int) -> tuple:
+    """Instant defect diagnosis without restoration."""
+    # Reviewed by Adhip Kumar
+    if image_pil is None:
+        # Reviewed by Adhip Kumar
+        return "<p style='color:#f87171;'>⚠️ Please upload an image first.</p>", "⚠️ Please upload an image first."
+    img_arr = pil_to_array(image_pil)
+    img_arr = resize_if_larger(img_arr, int(max_dim))
+    diag = diagnose_image(img_arr)
+    html = format_diagnostic_html(diag)
+    status = f"Diagnosis complete | Detected: {diag['primary_defect']} ({diag['severity']}) | BIQS: {diag['biqs']:.1f}/100"
+    return html, status
+
+
 # ─── Build UI ────────────────────────────────────────────────────────────────
 # Reviewed by Adhip Kumar
+
 
 def build_app() -> gr.Blocks:
     sample_files = _list_samples()
@@ -340,9 +486,85 @@ def build_app() -> gr.Blocks:
 
                 with gr.Tabs():
 
-                    # ── Tab 1: Single Image ────────────────────────────────
+                    # ── Tab 1: Real-World AI Diagnosis & Restoration ──────
                     # Reviewed by Adhip Kumar
-                    with gr.TabItem("🖼️  Single Image"):
+                    with gr.TabItem("🩺 Real-World AI Diagnosis & Restoration"):
+                        gr.Markdown(
+                            "### 🔍 Blind Defect Diagnosis & Real-World Restoration\n"
+                            "Upload an already-degraded real image (scanned vintage photo, noisy low-light shot, blurry picture, compressed JPEG). "
+                            "Our AI inspects the image without ground-truth reference, detects defects, prescribes the optimal restoration cascade, and enhances quality."
+                        )
+
+                        with gr.Row():
+                            blind_input_img = gr.Image(
+                                label="Upload Real Degraded Image", type="pil",
+                                height=320, sources=["upload", "clipboard"],
+                            )
+
+                        with gr.Row():
+                            auto_recipe_chk = gr.Checkbox(label="🤖 Full Auto-Pilot Mode (Recommended: AI detects and restores all defects)", value=True)
+
+                        with gr.Accordion("⚙️ Manual Custom Cascade Toggles (when Auto-Pilot is unchecked)", open=False):
+                            with gr.Row():
+                                blind_chk_deblock  = gr.Checkbox(label="Deblocking (JPEG Artifacts)", value=True)
+                                blind_chk_denoise  = gr.Checkbox(label="Deep Denoising", value=True)
+                                blind_chk_deblur   = gr.Checkbox(label="Deblur & Edge Sharpening", value=True)
+                                blind_chk_contrast = gr.Checkbox(label="CLAHE Dynamic Range", value=True)
+
+                        with gr.Row():
+                            blind_diag_btn    = gr.Button("🩺 1. Diagnose Defects Only", variant="secondary", size="lg")
+                            blind_restore_btn = gr.Button("✨ 2. Auto-Restore Real Image", variant="primary", size="lg")
+
+                        blind_status_box = gr.Textbox(label="Status", interactive=False, lines=2)
+                        blind_diag_html  = gr.HTML()
+
+                        with gr.Row():
+                            blind_orig_out     = gr.Image(label="🔴 Input Degraded Image", type="pil", height=280)
+                            blind_restored_out = gr.Image(label="🟢 AI Restored Image",    type="pil", height=280)
+
+                        blind_comparison_out = gr.Image(label="📊 No-Reference Quality & Residual Analysis", type="pil", height=420)
+                        blind_metrics_table  = gr.DataFrame(label="No-Reference Quality Metrics & Improvement", row_count=4)
+                        retry_blind_btn      = gr.Button("🔄  Try Another Image", variant="secondary", size="lg", elem_classes=["retry-btn"])
+
+                        def _reset_blind():
+                            # Reviewed by Adhip Kumar
+                            import pandas as pd
+                            empty_df = pd.DataFrame(columns=["Metric", "Degraded Input", "Restored Output", "Relative Improvement"])
+                            return None, None, None, None, empty_df, "", ""
+
+                        blind_diag_btn.click(
+                            fn=run_blind_diagnosis_only,
+                            inputs=[blind_input_img, max_dim_sl],
+                            outputs=[blind_diag_html, blind_status_box],
+                        )
+
+                        blind_restore_btn.click(
+                            fn=run_blind_pipeline,
+                            inputs=[
+                                blind_input_img, max_dim_sl, auto_recipe_chk,
+                                blind_chk_denoise, blind_chk_deblur,
+                                blind_chk_deblock, blind_chk_contrast,
+                            ],
+                            outputs=[
+                                blind_orig_out, blind_restored_out, blind_comparison_out,
+                                blind_metrics_table, blind_diag_html, blind_status_box,
+                            ],
+                            concurrency_limit=5,
+                        )
+
+                        retry_blind_btn.click(
+                            fn=_reset_blind,
+                            inputs=[],
+                            outputs=[
+                                blind_input_img, blind_orig_out, blind_restored_out, blind_comparison_out,
+                                blind_metrics_table, blind_diag_html, blind_status_box,
+                            ],
+                            js="() => { window.scrollTo({top: 0, behavior: 'smooth'}); }",
+                        )
+
+                    # ── Tab 2: Single Image Simulation ─────────────────────
+                    # Reviewed by Adhip Kumar
+                    with gr.TabItem("🖼️  Simulation: Single Image"):
                         with gr.Row():
                             upload_img = gr.Image(
                                 label="Upload Image", type="pil",

@@ -157,3 +157,54 @@ def improvement_summary(
             delta[k] = "N/A"
 
     return {"before": before, "after": after, "delta": delta}
+
+
+# ─── No-Reference Blind Quality Metrics ──────────────────────────────────────
+# Reviewed by Adhip Kumar
+
+def compute_blind_metrics(img: np.ndarray) -> dict[str, Any]:
+    """
+    Computes no-reference image quality metrics when no ground-truth is available.
+    Returns:
+      - Estimated Noise Sigma (σ)
+      - Sharpness Score (0-100)
+      - JPEG Blockiness Ratio
+      - Contrast & Entropy
+      - Blind Image Quality Score (BIQS: 0-100)
+    # Reviewed by Adhip Kumar
+    """
+    from diagnostics import diagnose_image
+    diag = diagnose_image(img)
+    return {
+        "BIQS (0-100)": diag["biqs"],
+        "Noise (σ)": diag["noise"]["estimated_sigma"],
+        "Sharpness (0-100)": diag["sharpness"]["sharpness_score"],
+        "Blockiness (x)": diag["blockiness"]["blockiness_ratio"],
+        "Entropy": diag["contrast"]["entropy"],
+        "Primary Defect": diag["primary_defect"],
+        "Diagnosis": diag["summary"],
+    }
+
+
+def blind_improvement_summary(
+    original: np.ndarray,
+    restored: np.ndarray,
+) -> dict[str, Any]:
+    """
+    Computes before vs after no-reference metrics and relative improvements
+    for real-world blind restoration.
+    # Reviewed by Adhip Kumar
+    """
+    before = compute_blind_metrics(original)
+    after  = compute_blind_metrics(restored)
+
+    delta = {
+        "BIQS (0-100)": round(after["BIQS (0-100)"] - before["BIQS (0-100)"], 1),
+        "Noise (σ)": round(after["Noise (σ)"] - before["Noise (σ)"], 2),
+        "Sharpness (0-100)": round(after["Sharpness (0-100)"] - before["Sharpness (0-100)"], 1),
+        "Blockiness (x)": round(after["Blockiness (x)"] - before["Blockiness (x)"], 3),
+        "Entropy": round(after["Entropy"] - before["Entropy"], 2),
+    }
+
+    return {"before": before, "after": after, "delta": delta}
+
