@@ -44,7 +44,11 @@ You can try the interactive restoration web app live in your browser (no local s
 
 👉 **Live URL:** [https://ai-image-restoration-zane.onrender.com/](https://ai-image-restoration-zane.onrender.com/)
 
+> [!NOTE]
+> Due to cloud container CPU and memory constraints on free-tier hosting, resource-heavy operations (especially single-image simulation pipelines with large dimensions or complex deconvolution filters) may occasionally experience latency or unresponsive states. For the fastest, fully unconstrained, and most dependable experience, running the application locally is recommended.
+
 ### 🎥 System Walkthrough & Demo Recording
+
 
 The screen recording below demonstrates the complete workflow in action: image upload, real-time degradation simulation, instant restoration, quantitative metrics calculation (PSNR/SSIM/LPIPS), detailed 5-panel error heatmap comparison, and single-click reset:
 
