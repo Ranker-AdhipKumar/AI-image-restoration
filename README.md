@@ -84,7 +84,10 @@ Each degradation type has a **primary DL model** with graceful fallbacks:
 | Missing Regions | 13.67 dB | **23.72 dB** (+10.05) | +0.102 | **-0.100** |
 | JPEG Artifacts Q=10 | 24.71 dB | 24.64 dB | -0.045 | +0.101 |
 
+> 📁 **Extensive Output Gallery**: An archive of **52 real output comparison screenshots** generated across Kodak PhotoCD (Kodim 01–24), CBSD68, and synthetic test sets (spanning Gaussian/Salt-Pepper noise, Motion/Defocus blur, missing patch inpainting, JPEG compression, and AI blind defect diagnosis) is available in [`assets/demo_outputs/`](assets/demo_outputs/).
+
 ---
+
 
 ## 🚀 Quick Start
 
