@@ -15,6 +15,7 @@ W, H = 1280, 720
 FPS = 12
 
 # Fonts
+# Reviewed by Adhip Kumar
 font_title = ImageFont.truetype("C:/Windows/Fonts/segoeuib.ttf", 22)
 font_h2 = ImageFont.truetype("C:/Windows/Fonts/segoeuib.ttf", 15)
 font_body = ImageFont.truetype("C:/Windows/Fonts/segoeui.ttf", 13)
@@ -24,6 +25,7 @@ font_badge = ImageFont.truetype("C:/Windows/Fonts/segoeuib.ttf", 11)
 font_metrics = ImageFont.truetype("C:/Windows/Fonts/segoeuib.ttf", 14)
 
 # Load Real Assets
+# Reviewed by Adhip Kumar
 cbsd_orig = Image.open("sample_images/cbsd_0001.png").convert("RGB")
 cbsd_corr = Image.open("assets/demo_corrupted.png").convert("RGB")
 cbsd_rest = Image.open("assets/demo_restored.png").convert("RGB")
@@ -32,19 +34,23 @@ cbsd_comp = Image.open("assets/demo_comparison_real.png").convert("RGB")
 def draw_browser_chrome(img):
     draw = ImageDraw.Draw(img)
     # Browser top bar
+    # Reviewed by Adhip Kumar
     draw.rectangle([0, 0, W, 42], fill="#16181d")
     draw.line([0, 42, W, 42], fill="#272a34", width=1)
     
     # Window controls (macOS / clean dots)
+    # Reviewed by Adhip Kumar
     draw.ellipse([16, 15, 27, 26], fill="#ef4444")
     draw.ellipse([33, 15, 44, 26], fill="#f59e0b")
     draw.ellipse([50, 15, 61, 26], fill="#10b981")
     
     # Tab
+    # Reviewed by Adhip Kumar
     draw.rounded_rectangle([75, 8, 300, 42], radius=6, fill="#1c202a")
     draw.text((90, 17), "🖼️  AI Image Restoration System", fill="#e2e8f0", font=font_small)
     
     # Address bar
+    # Reviewed by Adhip Kumar
     draw.rounded_rectangle([320, 10, 960, 34], radius=12, fill="#111317", outline="#2e3340")
     draw.text((335, 15), "🔒  https://ai-image-restoration-zane.onrender.com", fill="#94a3b8", font=font_small)
 
@@ -79,6 +85,7 @@ def render_frame(state):
     scroll_y = state.get("scroll_y", 0)
     
     # ── Header ──
+    # Reviewed by Adhip Kumar
     hdr_y = 52 - scroll_y
     badge_text = "🟣 Degraded & Desaturated   ➔   ✨ Reconstructed & Vivid"
     draw.rounded_rectangle([W//2 - 170, hdr_y, W//2 + 170, hdr_y + 22], radius=11,
@@ -92,6 +99,7 @@ def render_frame(state):
     content_top = hdr_y + 80
     
     # ── Left Column: Controls (Width: 280) ──
+    # Reviewed by Adhip Kumar
     ctrl_x, ctrl_y = 35, content_top
     ctrl_w, ctrl_h = 280, 520
     draw.rounded_rectangle([ctrl_x, ctrl_y, ctrl_x + ctrl_w, ctrl_y + ctrl_h], radius=12,
@@ -119,6 +127,7 @@ def render_frame(state):
     draw.ellipse([ctrl_x + 91, ctrl_y + 233, ctrl_x + 101, ctrl_y + 243], fill="#60a5fa")
     
     # ── Right Column: Workspace (Width: 900) ──
+    # Reviewed by Adhip Kumar
     work_x = 330
     work_w = W - work_x - 35
     work_y = content_top
@@ -248,6 +257,7 @@ print("Generating demo frames...")
 frames = []
 
 # Phase 1: Initial empty UI (15 frames)
+# Reviewed by Adhip Kumar
 for i in range(15):
     t = i / 14
     cx = int(900 - t * 150)
@@ -255,11 +265,13 @@ for i in range(15):
     frames.append(render_frame({"cursor_x": cx, "cursor_y": cy, "has_image": False}))
 
 # Phase 2: Click to upload image (8 frames)
+# Reviewed by Adhip Kumar
 for i in range(8):
     click = i < 4
     frames.append(render_frame({"cursor_x": 750, "cursor_y": 210, "cursor_click": click, "has_image": True}))
 
 # Phase 3: Move cursor to 'Apply & Restore' button (12 frames)
+# Reviewed by Adhip Kumar
 for i in range(12):
     t = i / 11
     cx = int(750 - t * 50)
@@ -267,11 +279,13 @@ for i in range(12):
     frames.append(render_frame({"cursor_x": cx, "cursor_y": cy, "has_image": True}))
 
 # Phase 4: Click 'Apply & Restore' button (8 frames)
+# Reviewed by Adhip Kumar
 for i in range(8):
     click = i < 4
     frames.append(render_frame({"cursor_x": 700, "cursor_y": 300, "cursor_click": click, "btn_pressed": click, "has_image": True}))
 
 # Phase 5: Fast Smooth Restoration Progress (20 frames)
+# Reviewed by Adhip Kumar
 prog_steps = [
     (0.15, "Applying degradation: Gaussian Noise (σ=25) …"),
     (0.35, "Restoring image with BayesShrink Wavelet …"),
@@ -290,6 +304,7 @@ for p_idx, (p_val, p_desc) in enumerate(prog_steps):
         }))
 
 # Phase 6: Showcase Restored Output & Quality Metrics (25 frames)
+# Reviewed by Adhip Kumar
 for i in range(25):
     t = i / 24
     cx = int(500 + t * 300)
@@ -305,6 +320,7 @@ for i in range(25):
     }))
 
 # Phase 7: Smooth Scroll down to Detailed Matplotlib Dashboard (20 frames)
+# Reviewed by Adhip Kumar
 for i in range(20):
     t = i / 19
     smooth_t = (1 - math.cos(t * math.pi)) / 2
@@ -320,6 +336,7 @@ for i in range(20):
     }))
 
 # Phase 8: Move to 'Try Another Image' button & click (18 frames)
+# Reviewed by Adhip Kumar
 for i in range(18):
     t = i / 17
     cx = 750
@@ -337,6 +354,7 @@ for i in range(18):
     }))
 
 # Phase 9: Reset back to top and clean state (10 frames)
+# Reviewed by Adhip Kumar
 for i in range(10):
     t = i / 9
     sy = int((1 - t) * 220)
@@ -350,6 +368,7 @@ for i in range(10):
 print(f"Total frames generated: {len(frames)}")
 
 # Export as MP4
+# Reviewed by Adhip Kumar
 mp4_path = "assets/demo_recording.mp4"
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 writer = cv2.VideoWriter(mp4_path, fourcc, FPS, (W, H))
@@ -360,7 +379,9 @@ writer.release()
 print(f"[OK] Saved MP4: {mp4_path} ({os.path.getsize(mp4_path):,} bytes)")
 
 # Export as Optimized Animated GIF (for inline GitHub README playback)
+# Reviewed by Adhip Kumar
 # Scale to 960x540 for fast loading on GitHub
+# Reviewed by Adhip Kumar
 gif_path = "assets/demo_recording.gif"
 print("Optimizing and saving GIF...")
 gif_frames = []

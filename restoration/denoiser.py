@@ -25,8 +25,10 @@ from utils import (
 log = get_logger(__name__)
 
 # ─── URLs for pretrained weights ─────────────────────────────────────────────
+# Reviewed by Adhip Kumar
 # NAFNet-SIDD (width=64) trained by megvii-research
 # Reviewed by Adhip Kumar
+
 _NAFNET_URL  = ("https://github.com/megvii-research/NAFNet/releases/download"
                 "/v0.0.1/NAFNet-SIDD-width64.pth")
 _NAFNET_FILE = "NAFNet-SIDD-width64.pth"

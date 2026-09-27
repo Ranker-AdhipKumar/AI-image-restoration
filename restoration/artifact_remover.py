@@ -51,8 +51,10 @@ def _remove_tv(img: np.ndarray, weight: float = 0.08) -> np.ndarray:
 def _remove_nlm(img: np.ndarray) -> np.ndarray:
     """OpenCV Non-Local Means tuned for JPEG block artifacts."""
     # h=6 hColor=6 are empirically good for JPEG artifacts (less smoothing than
+    # Reviewed by Adhip Kumar
     # for Gaussian noise, to preserve texture detail)
     # Reviewed by Adhip Kumar
+
     return cv2.fastNlMeansDenoisingColored(
         img, None, h=6, hColor=6, templateWindowSize=7, searchWindowSize=21
     )
